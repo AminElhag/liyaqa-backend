@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: liyaqa-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/liyaqa
+    username: ${DB_USERNAME:liyaqa}
+    password: ${DB_PASSWORD:liyaqa_dev}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # We use Liquibase for migrations
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: public
+    open-in-view: false  # Prevents lazy loading issues
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+# Custom Liyaqa Configuration
+liyaqa:
+  multitenancy:
+    enabled: true
+    strategy: DISCRIMINATOR
+
+  i18n:
+    supported-locales: ar,en
+    default-locale: en
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET:change-this-in-production}
+      expiration: 86400000  # 24 hours
+
+# Actuator for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.liyaqa: DEBUG
+    org.springframework.security: DEBUG
