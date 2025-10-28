@@ -4,6 +4,7 @@ plugins {
     kotlin("jvm") version "2.1.0"
     kotlin("plugin.spring") version "2.1.0"
     kotlin("plugin.jpa") version "2.1.0"
+    id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
 
 group = "com.liyaqa"
@@ -65,4 +66,10 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// Load .env file
+env {
+    // Load .env file if it exists
+    file(".env")
 }
