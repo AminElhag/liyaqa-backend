@@ -561,4 +561,261 @@
             <column name="longitude"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 010: Create Facility Employee Groups Table -->
+    <changeSet id="010-create-facility-employee-groups-table" author="liyaqa">
+        <comment>
+            Create facility_employee_groups table for grouping facility staff with permissions.
+            Groups are scoped to specific facilities for multi-tenancy.
+        </comment>
+
+        <createTable tableName="facility_employee_groups">
+            <!-- Primary Key -->
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Foreign Key to Facility -->
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_fac_emp_group_facility"
+                             references="sport_facilities(id)
+                             ON DELETE CASCADE"/>
+            </column>
+
+            <!-- Group Information -->
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT"/>
+
+            <column name="is_system" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Unique constraint: group name must be unique per facility -->
+        <addUniqueConstraint
+                tableName="facility_employee_groups"
+                columnNames="facility_id, name"
+                constraintName="uk_facility_group_name"/>
+
+        <!-- Indexes -->
+        <createIndex tableName="facility_employee_groups" indexName="idx_fac_emp_group_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="facility_employee_groups" indexName="idx_fac_emp_group_name">
+            <column name="name"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Changeset 011: Create Facility Employee Group Permissions Table -->
+    <changeSet id="011-create-facility-employee-group-permissions-table" author="liyaqa">
+        <comment>
+            Create facility_employee_group_permissions table to store permissions for each group.
+        </comment>
+
+        <createTable tableName="facility_employee_group_permissions">
+            <column name="group_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_group_permissions"
+                             references="facility_employee_groups(id)
+                             ON DELETE CASCADE"/>
+            </column>
+
+            <column name="permission" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Composite primary key -->
+        <addPrimaryKey tableName="facility_employee_group_permissions"
+                       columnNames="group_id, permission"
+                       constraintName="pk_group_permissions"/>
+
+        <!-- Index on group_id for fast permission lookup -->
+        <createIndex tableName="facility_employee_group_permissions" indexName="idx_group_permissions">
+            <column name="group_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Changeset 012: Create Facility Employees Table -->
+    <changeSet id="012-create-facility-employees-table" author="liyaqa">
+        <comment>
+            Create facility_employees table for staff who work at sport facilities.
+            Includes authentication, basic info, employment details, and session management.
+        </comment>
+
+        <createTable tableName="facility_employees">
+            <!-- Primary Key -->
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Foreign Key to Facility -->
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_fac_employee_facility"
+                             references="sport_facilities(id)
+                             ON DELETE CASCADE"/>
+            </column>
+
+            <!-- Basic Information -->
+            <column name="first_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="last_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Authentication -->
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Employment Information -->
+            <column name="employee_number" type="VARCHAR(50)"/>
+
+            <column name="job_title" type="VARCHAR(100)"/>
+
+            <column name="department" type="VARCHAR(100)"/>
+
+            <column name="hire_date" type="TIMESTAMP"/>
+
+            <!-- Contact Information -->
+            <column name="phone_number" type="VARCHAR(50)"/>
+
+            <column name="emergency_contact_name" type="VARCHAR(255)"/>
+
+            <column name="emergency_contact_phone" type="VARCHAR(50)"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="suspended_at" type="TIMESTAMP"/>
+
+            <column name="suspension_reason" type="TEXT"/>
+
+            <column name="terminated_at" type="TIMESTAMP"/>
+
+            <column name="termination_reason" type="TEXT"/>
+
+            <!-- Session Management -->
+            <column name="last_login_at" type="TIMESTAMP"/>
+
+            <column name="last_login_ip" type="VARCHAR(45)"/>
+
+            <column name="failed_login_attempts" type="INTEGER" defaultValueNumeric="0"/>
+
+            <column name="account_locked_until" type="TIMESTAMP"/>
+
+            <!-- Settings -->
+            <column name="timezone" type="VARCHAR(50)" defaultValue="UTC"/>
+
+            <column name="locale" type="VARCHAR(10)" defaultValue="en_US"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Unique constraint: email must be unique per facility -->
+        <addUniqueConstraint
+                tableName="facility_employees"
+                columnNames="facility_id, email"
+                constraintName="uk_facility_employee_email"/>
+
+        <!-- Unique constraint: employee number must be unique per facility -->
+        <addUniqueConstraint
+                tableName="facility_employees"
+                columnNames="facility_id, employee_number"
+                constraintName="uk_facility_employee_number"/>
+
+        <!-- Indexes -->
+        <createIndex tableName="facility_employees" indexName="idx_fac_emp_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="facility_employees" indexName="idx_fac_emp_email">
+            <column name="email"/>
+        </createIndex>
+
+        <createIndex tableName="facility_employees" indexName="idx_fac_emp_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="facility_employees" indexName="idx_fac_emp_employee_number">
+            <column name="employee_number"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Changeset 013: Create Facility Employee Group Members Junction Table -->
+    <changeSet id="013-create-facility-employee-group-members-table" author="liyaqa">
+        <comment>
+            Create junction table for many-to-many relationship between employees and groups.
+        </comment>
+
+        <createTable tableName="facility_employee_group_members">
+            <column name="employee_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_member_employee"
+                             references="facility_employees(id)
+                             ON DELETE CASCADE"/>
+            </column>
+
+            <column name="group_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_member_group"
+                             references="facility_employee_groups(id)
+                             ON DELETE CASCADE"/>
+            </column>
+        </createTable>
+
+        <!-- Composite primary key -->
+        <addPrimaryKey tableName="facility_employee_group_members"
+                       columnNames="employee_id, group_id"
+                       constraintName="pk_employee_group_members"/>
+
+        <!-- Indexes for both directions of lookup -->
+        <createIndex tableName="facility_employee_group_members" indexName="idx_member_employee">
+            <column name="employee_id"/>
+        </createIndex>
+
+        <createIndex tableName="facility_employee_group_members" indexName="idx_member_group">
+            <column name="group_id"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
