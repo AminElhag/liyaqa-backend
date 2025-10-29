@@ -1,0 +1,107 @@
+spring:
+  application:
+    name: liyaqa-backend
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:liyaqa}
+    username: ${DB_USERNAME:liyaqa}
+    password: ${DB_PASSWORD:liyaqa_dev}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: public
+    open-in-view: false
+    show-sql: true
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: false
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:liyaqa_redis_dev}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: -1ms
+        shutdown-timeout: 100ms
+
+liyaqa:
+  multitenancy:
+    enabled: true
+    strategy: DISCRIMINATOR
+
+  i18n:
+    supported-locales: ar,en
+    default-locale: en
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET:change-this-in-production}
+      expiration: 86400000
+
+  email:
+    enabled: ${EMAIL_ENABLED:false}
+    from: ${EMAIL_FROM:noreply@liyaqa.com}
+    security-team: ${EMAIL_SECURITY_TEAM:security@liyaqa.com}
+
+  app:
+    base-url: ${APP_BASE_URL:http://localhost:8080}
+
+  session:
+    timeout-hours: ${SESSION_TIMEOUT_HOURS:8}
+    redis-key-prefix: "liyaqa:session:"
+
+  async:
+    audit:
+      core-pool-size: ${AUDIT_CORE_POOL_SIZE:5}
+      max-pool-size: ${AUDIT_MAX_POOL_SIZE:10}
+      queue-capacity: ${AUDIT_QUEUE_CAPACITY:1000}
+      thread-name-prefix: "audit-"
+      batch-size: ${AUDIT_BATCH_SIZE:50}
+      batch-timeout-ms: ${AUDIT_BATCH_TIMEOUT_MS:1000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.liyaqa: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.jdbc: DEBUG
+    org.hibernate.SQL: DEBUG
