@@ -21,7 +21,7 @@ abstract class BaseEntity {
     var id: UUID? = null
 
     @Column(name = "tenant_id", nullable = false)
-    var tenantId: String = ""
+    open var tenantId: String = ""
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

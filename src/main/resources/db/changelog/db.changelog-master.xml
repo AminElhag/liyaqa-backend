@@ -195,4 +195,140 @@
             <column name="affected_tenant_id"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="007-enhance-tenant-table" author="liyaqa">
+        <comment>
+            Add comprehensive fields for tenant management including contact info,
+            billing, subscription plans, contracts, and terms acceptance.
+            This supports the full lifecycle of sports facility organizations.
+        </comment>
+
+        <!-- Contact Information -->
+        <addColumn tableName="tenants">
+            <column name="contact_email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="contact_phone" type="VARCHAR(50)"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="contact_person" type="VARCHAR(255)"/>
+        </addColumn>
+
+        <!-- Billing Information -->
+        <addColumn tableName="tenants">
+            <column name="billing_email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="billing_address" type="TEXT"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="tax_id" type="VARCHAR(100)"/>
+        </addColumn>
+
+        <!-- Subscription & Plan -->
+        <addColumn tableName="tenants">
+            <column name="plan_tier" type="VARCHAR(50)" defaultValue="FREE">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="subscription_status" type="VARCHAR(50)" defaultValue="TRIAL">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <!-- Multi-tenancy Support -->
+        <addColumn tableName="tenants">
+            <column name="subdomain" type="VARCHAR(100)">
+                <constraints unique="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Contract & Legal -->
+        <addColumn tableName="tenants">
+            <column name="contract_start_date" type="DATE"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="contract_end_date" type="DATE"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="terms_accepted_at" type="TIMESTAMP"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="terms_accepted_by" type="VARCHAR(255)"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="terms_version" type="VARCHAR(50)"/>
+        </addColumn>
+
+        <!-- Additional Metadata -->
+        <addColumn tableName="tenants">
+            <column name="description" type="TEXT"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="facility_type" type="VARCHAR(100)"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="timezone" type="VARCHAR(50)" defaultValue="UTC"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="locale" type="VARCHAR(10)" defaultValue="en_US"/>
+        </addColumn>
+
+        <!-- Tracking -->
+        <addColumn tableName="tenants">
+            <column name="suspended_at" type="TIMESTAMP"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="suspended_by_id" type="UUID"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="suspension_reason" type="TEXT"/>
+        </addColumn>
+
+        <addColumn tableName="tenants">
+            <column name="created_by_id" type="UUID">
+                <constraints foreignKeyName="fk_tenant_created_by" references="internal_employees(id)"/>
+            </column>
+        </addColumn>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="tenants" indexName="idx_tenant_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="tenants" indexName="idx_tenant_subscription_status">
+            <column name="subscription_status"/>
+        </createIndex>
+
+        <createIndex tableName="tenants" indexName="idx_tenant_plan_tier">
+            <column name="plan_tier"/>
+        </createIndex>
+
+        <createIndex tableName="tenants" indexName="idx_tenant_contact_email">
+            <column name="contact_email"/>
+        </createIndex>
+
+        <createIndex tableName="tenants" indexName="idx_tenant_subdomain">
+            <column name="subdomain"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
