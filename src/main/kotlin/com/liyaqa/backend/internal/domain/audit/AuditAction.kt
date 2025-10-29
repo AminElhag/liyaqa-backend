@@ -16,6 +16,7 @@ enum class AuditAction {
     EMPLOYEE_DELETED,
     EMPLOYEE_GROUP_ASSIGNED,
     EMPLOYEE_GROUP_REMOVED,
+    EMPLOYEE_LOGIN,
     
     // Tenant Operations
     TENANT_CREATED,
@@ -53,5 +54,5 @@ enum class AuditAction {
     PERMISSION_REVOKED,
     SUSPICIOUS_ACTIVITY_DETECTED,
     API_KEY_CREATED,
-    API_KEY_REVOKED
+    API_KEY_REVOKED,
 }

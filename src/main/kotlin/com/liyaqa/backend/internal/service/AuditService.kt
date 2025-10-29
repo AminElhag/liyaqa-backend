@@ -378,6 +378,87 @@ class AuditService(
         logger.info("Audit: Sensitive search - ${requestedBy.email}: $searchType on $entityType")
     }
 
+    /**
+     * Log unauthorized access attempt.
+     */
+    fun logUnauthorizedAccess(employee: Employee, attemptedAction: String, entityType: EntityType) {
+        val audit = AuditLogBuilder()
+            .employee(employee.id!!, employee.email, employee.getFullName())
+            .action(AuditAction.EMPLOYEE_LOGIN) // TODO: Add UNAUTHORIZED_ACCESS action
+            .entity(entityType, "N/A")
+            .description("Unauthorized access attempt: $attemptedAction")
+            .build()
+
+        enqueueAuditLog(audit)
+        logger.warn("Audit: Unauthorized access - ${employee.email}: $attemptedAction on $entityType")
+    }
+
+    /**
+     * Log entity creation (generic).
+     */
+    fun logCreate(createdBy: Employee, entityType: EntityType, entityId: UUID, details: Map<String, String>) {
+        val audit = AuditLogBuilder()
+            .employee(createdBy.id!!, createdBy.email, createdBy.getFullName())
+            .action(AuditAction.TENANT_CREATED) // Generic create action
+            .entity(entityType, entityId.toString())
+            .description("Created ${entityType.name}: ${details.values.joinToString(", ")}")
+            .build()
+
+        enqueueAuditLog(audit)
+        logger.info("Audit: Entity created - ${entityType.name} by ${createdBy.email}")
+    }
+
+    /**
+     * Log entity update (generic).
+     */
+    fun logUpdate(updatedBy: Employee, entityType: EntityType, entityId: UUID, changes: Map<String, String>) {
+        val audit = AuditLogBuilder()
+            .employee(updatedBy.id!!, updatedBy.email, updatedBy.getFullName())
+            .action(AuditAction.EMPLOYEE_UPDATED) // Generic update action
+            .entity(entityType, entityId.toString())
+            .description("Updated ${entityType.name}: ${changes.entries.joinToString(", ") { "${it.key}=${it.value}" }}")
+            .build()
+
+        enqueueAuditLog(audit)
+        logger.info("Audit: Entity updated - ${entityType.name} by ${updatedBy.email}")
+    }
+
+    /**
+     * Log entity deletion (generic).
+     */
+    fun logDelete(deletedBy: Employee, entityType: EntityType, entityId: UUID, details: Map<String, String>) {
+        val audit = AuditLogBuilder()
+            .employee(deletedBy.id!!, deletedBy.email, deletedBy.getFullName())
+            .action(AuditAction.EMPLOYEE_DELETED) // Generic delete action
+            .entity(entityType, entityId.toString())
+            .description("Deleted ${entityType.name}: ${details.values.joinToString(", ")}")
+            .build()
+
+        enqueueAuditLog(audit)
+        logger.info("Audit: Entity deleted - ${entityType.name} by ${deletedBy.email}")
+    }
+
+    /**
+     * Log security event (generic).
+     */
+    fun logSecurityEvent(
+        employee: Employee,
+        action: AuditAction,
+        entityType: EntityType,
+        entityId: UUID,
+        details: Map<String, String>
+    ) {
+        val audit = AuditLogBuilder()
+            .employee(employee.id!!, employee.email, employee.getFullName())
+            .action(action)
+            .entity(entityType, entityId.toString())
+            .description("Security event: ${action.name} - ${details.entries.joinToString(", ") { "${it.key}=${it.value}" }}")
+            .build()
+
+        enqueueAuditLog(audit)
+        logger.info("Audit: Security event - ${action.name} on ${entityType.name} by ${employee.email}")
+    }
+
     // ========== Utility Methods ==========
 
     /**

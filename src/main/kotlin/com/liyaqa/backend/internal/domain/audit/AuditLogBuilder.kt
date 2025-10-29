@@ -58,6 +58,8 @@ class AuditLogBuilder {
 
     fun duration(ms: Long) = apply { this.durationMs = ms }
 
+
+
     fun build(): AuditLog {
         require(employeeId != null) { "Employee ID is required" }
         require(action != null) { "Action is required" }
