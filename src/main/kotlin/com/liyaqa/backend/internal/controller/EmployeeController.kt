@@ -1,13 +1,13 @@
 package com.liyaqa.backend.internal.controller
 
 import com.liyaqa.backend.internal.domain.employee.Employee
-import com.liyaqa.backend.internal.dto.employee.*
-import com.liyaqa.backend.internal.security.RequirePermission
-import com.liyaqa.backend.internal.security.CurrentEmployee
-import com.liyaqa.backend.internal.service.EmployeeService
 import com.liyaqa.backend.internal.domain.employee.Permission
+import com.liyaqa.backend.internal.dto.employee.*
+import com.liyaqa.backend.internal.security.CurrentEmployee
+import com.liyaqa.backend.internal.security.RequirePermission
 import com.liyaqa.backend.internal.service.EmployeeAlreadyExistsException
 import com.liyaqa.backend.internal.service.EmployeeNotFoundException
+import com.liyaqa.backend.internal.service.EmployeeService
 import com.liyaqa.backend.internal.service.UnauthorizedException
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
@@ -35,7 +35,10 @@ import java.util.*
  */
 @RestController
 @RequestMapping("/api/v1/internal/employees")
-@CrossOrigin(origins = ["http://localhost:3000"], allowCredentials = true.toString()) // Configure properly in production
+@CrossOrigin(
+    origins = ["http://localhost:3000"],
+    allowCredentials = true.toString()
+) // Configure properly in production
 class EmployeeController(
     private val employeeService: EmployeeService
 ) {
@@ -87,7 +90,7 @@ class EmployeeController(
     ): Page<EmployeeResponse> {
         val filter = EmployeeSearchFilter(
             searchTerm = search,
-            department = department,
+            departmentFilter = department,
             status = status,
             includeTerminated = includeTerminated,
         )
@@ -261,30 +264,36 @@ class EmployeeController(
     @ExceptionHandler(EmployeeNotFoundException::class)
     fun handleEmployeeNotFound(ex: EmployeeNotFoundException): ResponseEntity<ErrorResponse> {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(ErrorResponse(
-                error = "EMPLOYEE_NOT_FOUND",
-                message = "The requested employee was not found",
-                timestamp = Instant.now()
-            ))
+            .body(
+                ErrorResponse(
+                    error = "EMPLOYEE_NOT_FOUND",
+                    message = "The requested employee was not found",
+                    timestamp = Instant.now()
+                )
+            )
     }
 
     @ExceptionHandler(EmployeeAlreadyExistsException::class)
     fun handleEmployeeExists(ex: EmployeeAlreadyExistsException): ResponseEntity<ErrorResponse> {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-            .body(ErrorResponse(
-                error = "EMPLOYEE_EXISTS",
-                message = "An employee with this email already exists",
-                timestamp = Instant.now()
-            ))
+            .body(
+                ErrorResponse(
+                    error = "EMPLOYEE_EXISTS",
+                    message = "An employee with this email already exists",
+                    timestamp = Instant.now()
+                )
+            )
     }
 
     @ExceptionHandler(UnauthorizedException::class)
     fun handleUnauthorized(ex: UnauthorizedException): ResponseEntity<ErrorResponse> {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-            .body(ErrorResponse(
-                error = "INSUFFICIENT_PERMISSIONS",
-                message = "You don't have permission to perform this action",
-                timestamp = Instant.now()
-            ))
+            .body(
+                ErrorResponse(
+                    error = "INSUFFICIENT_PERMISSIONS",
+                    message = "You don't have permission to perform this action",
+                    timestamp = Instant.now()
+                )
+            )
     }
 }

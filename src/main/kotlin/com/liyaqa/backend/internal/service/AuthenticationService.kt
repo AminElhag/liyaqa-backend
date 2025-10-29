@@ -9,6 +9,7 @@ import com.liyaqa.backend.internal.dto.auth.RefreshTokenRequest
 import com.liyaqa.backend.internal.repository.EmployeeRepository
 import com.liyaqa.backend.internal.security.JwtTokenProvider
 import com.liyaqa.backend.internal.security.PasswordEncoder
+import com.liyaqa.backend.internal.security.validatePasswordStrength
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -423,4 +424,73 @@ class AuthenticationService(
             bearerToken.substring(7)
         } else null
     }
+
+    fun completePasswordReset(token: String, newPassword: String, httpRequest: HttpServletRequest) {
+        val startTime = System.currentTimeMillis()
+
+        // Validate reset token
+        val claims = jwtTokenProvider.validatePasswordResetToken(token)
+            ?: throw InvalidTokenException("Invalid or expired password reset token")
+
+        // Extract employee ID from token
+        val employeeId = try {
+            UUID.fromString(claims.subject)
+        } catch (ex: IllegalArgumentException) {
+            throw InvalidTokenException("Invalid token format")
+        }
+
+        // Find employee
+        val employee = employeeRepository.findById(employeeId)
+            .orElseThrow { InvalidTokenException("Employee not found") }
+
+        // Validate account is still active
+        if (employee.status == EmployeeStatus.TERMINATED) {
+            throw AccountTerminatedException("Cannot reset password for terminated account")
+        }
+
+        // Validate password strength
+        try {
+            validatePasswordStrength(newPassword)
+        } catch (ex: IllegalArgumentException) {
+            auditService.logFailedPasswordChange(employee, ex.message ?: "Invalid password")
+            throw InvalidPasswordException(ex.message ?: "Password does not meet requirements")
+        }
+
+        // Check if password is being reused (simplified - production would check history)
+        if (passwordEncoder.matches(newPassword, employee.passwordHash)) {
+            auditService.logFailedPasswordChange(employee, "Password reuse attempt")
+            throw PasswordReuseException("Cannot reuse your current password")
+        }
+
+        // Update password
+        employee.passwordHash = passwordEncoder.encode(newPassword)
+
+        // Reset security flags
+        employee.failedLoginAttempts = 0
+        employee.lockedUntil = null
+        employee.mustChangePassword = false
+
+        // Save changes
+        employeeRepository.save(employee)
+
+        // Blacklist the reset token to prevent reuse
+        jwtTokenProvider.blacklistToken(token)
+
+        // Terminate all active sessions for security
+        sessionService.revokeAllSessions(employee.id!!)
+
+        // Calculate duration for monitoring
+        val duration = System.currentTimeMillis() - startTime
+
+        // Log password reset completion
+        auditService.logPasswordChanged(employee)
+        logger.info("Password reset completed for ${employee.email} from ${extractIpAddress(httpRequest)} in ${duration}ms")
+
+        // Send confirmation email
+        emailService.sendPasswordChangeConfirmation(
+            email = employee.email,
+            name = employee.getFullName()
+        )
+    }
+
 }

@@ -37,6 +37,10 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.liquibase:liquibase-core") // For database migrations
 
+    // Redis - For distributed session storage and token blacklist
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("io.lettuce:lettuce-core") // Modern, high-performance Redis client
+
     // Multi-tenancy & Security
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
@@ -49,6 +53,9 @@ dependencies {
     // Development Tools
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
+    // JavaMailSender
+    implementation("org.springframework.boot:spring-boot-starter-mail:4.0.0-RC1")
 
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")

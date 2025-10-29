@@ -1,10 +1,6 @@
 package com.liyaqa.backend.internal.repository
 
-import com.liyaqa.backend.internal.domain.audit.AuditAction
-import com.liyaqa.backend.internal.domain.audit.AuditLog
-import com.liyaqa.backend.internal.domain.audit.EntityType
 import com.liyaqa.backend.internal.domain.employee.Employee
-import com.liyaqa.backend.internal.domain.employee.EmployeeGroup
 import com.liyaqa.backend.internal.domain.employee.EmployeeStatus
 import com.liyaqa.backend.internal.domain.employee.Permission
 import com.liyaqa.backend.internal.dto.employee.EmployeeSearchFilter
@@ -46,38 +42,46 @@ interface EmployeeRepository : JpaRepository<Employee, UUID> {
      * This design allows us to quickly identify who has access to critical operations,
      * essential for both security audits and incident response.
      */
-    @Query("""
+    @Query(
+        """
         SELECT DISTINCT e FROM Employee e 
         JOIN e.groups g 
         JOIN g.permissions p 
         WHERE p = :permission
-    """)
+    """
+    )
     fun findByPermission(@Param("permission") permission: Permission): List<Employee>
 
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(DISTINCT e) FROM Employee e 
         JOIN e.groups g 
         JOIN g.permissions p 
         WHERE p = :permission AND e.status = 'ACTIVE'
-    """)
+    """
+    )
     fun countByPermission(@Param("permission") permission: Permission): Long
 
     /**
      * Security monitoring queries supporting our threat detection capabilities.
      * These patterns emerged from real incidents and near-misses in our operational history.
      */
-    @Query("""
+    @Query(
+        """
         SELECT e FROM Employee e 
         WHERE e.failedLoginAttempts > :threshold 
         AND e.status = 'ACTIVE'
-    """)
+    """
+    )
     fun findWithHighFailedAttempts(@Param("threshold") threshold: Int): List<Employee>
 
-    @Query("""
+    @Query(
+        """
         SELECT e FROM Employee e 
         WHERE e.lockedUntil IS NOT NULL 
         AND e.lockedUntil > :now
-    """)
+    """
+    )
     fun findCurrentlyLocked(@Param("now") now: Instant): List<Employee>
 
     /**
@@ -85,13 +89,15 @@ interface EmployeeRepository : JpaRepository<Employee, UUID> {
      * This design reflects our commitment to preventing burnout while
      * maintaining service quality.
      */
-    @Query("""
+    @Query(
+        """
         SELECT e FROM Employee e 
         WHERE e.department = 'Support' 
         AND e.status = 'ACTIVE' 
         AND e.currentActiveTickets < e.maxConcurrentTickets
         ORDER BY e.currentActiveTickets ASC
-    """)
+    """
+    )
     fun findAvailableSupportAgents(): List<Employee>
 
     /**
@@ -102,17 +108,19 @@ interface EmployeeRepository : JpaRepository<Employee, UUID> {
      * We use JPQL here instead of Criteria API for readability - the trade-off
      * is slightly less type safety for significantly better maintainability.
      */
-    @Query("""
-        SELECT e FROM Employee e 
-        WHERE (:searchTerm IS NULL OR 
-               LOWER(e.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR 
-               LOWER(e.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR 
+    @Query(
+        """
+        SELECT e FROM Employee e
+        WHERE (:searchTerm IS NULL OR
+               LOWER(e.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
+               LOWER(e.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
                LOWER(e.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
         AND (:department IS NULL OR e.department = :department)
         AND (:status IS NULL OR e.status = :status)
         AND (:includeTerminated = true OR e.status != 'TERMINATED')
-    """)
-    fun findByFilter(
+    """
+    )
+    fun searchEmployees(
         @Param("searchTerm") searchTerm: String?,
         @Param("department") department: String?,
         @Param("status") status: String?,
@@ -121,37 +129,26 @@ interface EmployeeRepository : JpaRepository<Employee, UUID> {
     ): Page<Employee>
 
     /**
-     * Extension method for cleaner service layer code.
-     * This design pattern allows us to add domain-specific behavior
-     * without modifying the interface contract.
-     */
-    fun findByFilter(filter: EmployeeSearchFilter, pageable: Pageable): Page<Employee> {
-        return findByFilter(
-            filter.searchTerm,
-            filter.department,
-            filter.status,
-            filter.includeTerminated,
-            pageable
-        )
-    }
-
-    /**
      * Activity tracking queries for compliance and analytics.
      * These support our data-driven approach to team management.
      */
-    @Query("""
+    @Query(
+        """
         SELECT e FROM Employee e 
         WHERE e.lastLoginAt IS NULL 
         AND e.status = 'ACTIVE' 
         AND e.createdAt < :cutoffDate
-    """)
+    """
+    )
     fun findNeverLoggedIn(@Param("cutoffDate") cutoffDate: Instant): List<Employee>
 
-    @Query("""
+    @Query(
+        """
         SELECT e FROM Employee e 
         WHERE e.lastLoginAt < :inactiveThreshold 
         AND e.status = 'ACTIVE'
-    """)
+    """
+    )
     fun findInactiveEmployees(@Param("inactiveThreshold") inactiveThreshold: Instant): List<Employee>
 }
 

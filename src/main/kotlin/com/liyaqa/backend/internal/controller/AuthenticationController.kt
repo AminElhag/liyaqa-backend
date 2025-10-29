@@ -1,14 +1,15 @@
 package com.liyaqa.backend.internal.controller
 
 
-import com.liyaqa.backend.internal.dto.auth.*
-import com.liyaqa.backend.internal.service.AuthenticationService
 import com.liyaqa.backend.internal.domain.employee.Employee
+import com.liyaqa.backend.internal.dto.auth.*
+import com.liyaqa.backend.internal.dto.employee.MessageResponse
 import com.liyaqa.backend.internal.security.CurrentEmployee
+import com.liyaqa.backend.internal.service.AuthenticationService
+import com.liyaqa.backend.internal.service.toBasicResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -27,7 +28,7 @@ import org.springframework.web.bind.annotation.*
  */
 @RestController
 @RequestMapping("/api/v1/internal/auth")
-@CrossOrigin(origins = ["http://localhost:3000"], allowCredentials = true)
+@CrossOrigin(origins = ["http://localhost:3000"], allowCredentials = "true")
 class AuthenticationController(
     private val authenticationService: AuthenticationService
 ) {

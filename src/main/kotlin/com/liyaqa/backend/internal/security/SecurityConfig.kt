@@ -129,14 +129,14 @@ class SecurityConfig(
     }
 
     /**
-     * Password encoder using BCrypt with appropriate cost factor.
+     * Password encoder using BCrypt with cost factor 12.
      *
-     * BCrypt remains the gold standard for password hashing due to its
-     * resistance to GPU-based attacks. The cost factor of 12 balances
-     * security with authentication latency (around 250ms on modern hardware).
+     * BCrypt is designed to be slow (a feature, not a bug) to resist
+     * brute force attacks. Cost factor 12 takes ~0.3s per hash,
+     * acceptable for our login flow while providing strong security.
      */
     @Bean
-    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder(12)
+    fun springPasswordEncoder(): PasswordEncoder = BCryptPasswordEncoder(12)
 
     @Bean
     fun authenticationManager(

@@ -9,10 +9,9 @@ import java.util.UUID
  */
 data class EmployeeSearchFilter(
     val searchTerm: String? = null,
-    val department: String? = null,
     val status: String? = null,
     val includeTerminated: Boolean = false,
     val hasPermission: Permission? = null,
     val groupId: UUID? = null,
-    val departmentFilter: String
+    val departmentFilter: String? = null
 )

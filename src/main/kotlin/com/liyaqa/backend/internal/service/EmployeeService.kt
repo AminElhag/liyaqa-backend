@@ -6,6 +6,7 @@ import com.liyaqa.backend.internal.dto.employee.*
 import com.liyaqa.backend.internal.repository.EmployeeGroupRepository
 import com.liyaqa.backend.internal.repository.EmployeeRepository
 import com.liyaqa.backend.internal.security.PasswordEncoder
+import com.liyaqa.backend.internal.security.validatePasswordStrength
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -248,7 +249,13 @@ class EmployeeService(
         // Permission-based filtering
         val effectiveFilter = applyPermissionFilter(filter, requestedBy)
 
-        val page = employeeRepository.findByFilter(effectiveFilter, pageable)
+        val page = employeeRepository.searchEmployees(
+            effectiveFilter.searchTerm,
+            effectiveFilter.departmentFilter,
+            effectiveFilter.status,
+            effectiveFilter.includeTerminated,
+            pageable
+        )
 
         // Log if sensitive search was performed
         if (filter.includeTerminated == true) {
@@ -412,14 +419,6 @@ class EmployeeService(
                 }
             }
         }
-    }
-
-    private fun validatePasswordStrength(password: String) {
-        require(password.length >= 12) { "Password must be at least 12 characters" }
-        require(password.any { it.isDigit() }) { "Password must contain at least one digit" }
-        require(password.any { it.isUpperCase() }) { "Password must contain at least one uppercase letter" }
-        require(password.any { it.isLowerCase() }) { "Password must contain at least one lowercase letter" }
-        require(password.any { !it.isLetterOrDigit() }) { "Password must contain at least one special character" }
     }
 
     private fun generateTemporaryPassword(): String {

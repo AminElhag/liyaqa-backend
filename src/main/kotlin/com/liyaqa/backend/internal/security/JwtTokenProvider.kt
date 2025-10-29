@@ -5,48 +5,58 @@ import io.jsonwebtoken.*
 import io.jsonwebtoken.security.Keys
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Component
 import java.security.Key
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 /**
- * JWT token provider implementing our stateless authentication strategy.
- * 
+ * JWT token provider with Redis-backed token blacklist.
+ *
  * This design balances several concerns:
  * - Security: Short-lived access tokens with longer refresh tokens
  * - Performance: Stateless validation without database hits
  * - Flexibility: Claims-based authorization for fine-grained control
+ * - Revocation: Immediate token blacklist via Redis for security
  * - Observability: Comprehensive logging for security monitoring
- * 
+ *
  * The main trade-off is token size versus database queries. We embed
  * essential claims in the token to avoid database lookups on every request,
  * accepting larger HTTP headers as the cost.
+ *
+ * Redis Blacklist Implementation:
+ * - Keys: `liyaqa:blacklist:token:{tokenHash}`
+ * - TTL: Matches token expiration (automatic cleanup)
+ * - Performance: O(1) lookup on every request
+ * - Distributed: Works across multiple backend instances
  */
 @Component
 class JwtTokenProvider(
+    private val redisTemplate: RedisTemplate<String, Any>,
+
     @Value("\${liyaqa.security.jwt.secret}")
     private val jwtSecret: String,
-    
+
     @Value("\${liyaqa.security.jwt.access-token-expiration:3600000}")  // 1 hour default
     private val accessTokenExpiration: Long,
-    
+
     @Value("\${liyaqa.security.jwt.refresh-token-expiration:604800000}")  // 7 days default
     private val refreshTokenExpiration: Long,
-    
+
     @Value("\${liyaqa.security.jwt.password-reset-expiration:3600000}")  // 1 hour
-    private val passwordResetExpiration: Long
+    private val passwordResetExpiration: Long,
+
+    @Value("\${liyaqa.session.redis-key-prefix:liyaqa:session:}")
+    private val keyPrefix: String
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
-    
+
     // Lazy initialization to ensure configuration is loaded
-    private val key: Key by lazy { 
-        Keys.hmacShaKeyFor(jwtSecret.toByteArray()) 
+    private val key: Key by lazy {
+        Keys.hmacShaKeyFor(jwtSecret.toByteArray())
     }
-    
-    // Token blacklist for immediate revocation capability
-    // In production, this would use Redis with TTL matching token expiry
-    private val tokenBlacklist = mutableSetOf<String>()
     
     companion object {
         const val TOKEN_TYPE_ACCESS = "access"
@@ -167,18 +177,20 @@ class JwtTokenProvider(
     
     /**
      * Validates token and extracts claims.
-     * 
+     *
      * This method implements our fail-secure principle - any validation
      * failure returns null rather than throwing, allowing graceful
      * degradation at higher layers.
+     *
+     * Redis blacklist check happens first for immediate revocation.
      */
     fun validateToken(token: String): Claims? {
-        // Check blacklist first for immediate revocation
-        if (tokenBlacklist.contains(token)) {
+        // Check Redis blacklist first for immediate revocation
+        if (isTokenBlacklisted(token)) {
             logger.warn("Attempted use of blacklisted token")
             return null
         }
-        
+
         return try {
             Jwts.parser()
                 .setSigningKey(key)
@@ -254,26 +266,69 @@ class JwtTokenProvider(
     }
     
     /**
-     * Blacklists token for immediate revocation.
-     * 
+     * Blacklists token for immediate revocation with Redis storage.
+     *
      * This addresses the main weakness of JWTs - inability to revoke.
      * The blacklist is checked on every request, providing immediate
-     * revocation at the cost of a lookup.
+     * revocation at the cost of a Redis lookup.
+     *
+     * TTL Strategy:
+     * - TTL matches token expiration time
+     * - Redis automatically removes expired blacklist entries
+     * - No manual cleanup needed
      */
     fun blacklistToken(token: String) {
-        tokenBlacklist.add(token)
-        logger.info("Token blacklisted")
-        
-        // In production, also add to Redis with TTL
-        // redisTemplate.opsForValue().set(
-        //     "blacklist:$token", 
-        //     true, 
-        //     getTokenExpiration(token), 
-        //     TimeUnit.MILLISECONDS
-        // )
+        try {
+            // Calculate remaining token validity for TTL
+            val ttlMillis = getTokenExpiration(token)
+            if (ttlMillis <= 0) {
+                logger.debug("Token already expired, not adding to blacklist")
+                return
+            }
+
+            // Hash token to prevent storing full JWT (security best practice)
+            val tokenHash = token.hashCode().toString()
+            val blacklistKey = "${keyPrefix}blacklist:token:$tokenHash"
+
+            // Store in Redis with TTL matching token expiration
+            redisTemplate.opsForValue().set(
+                blacklistKey,
+                true,
+                Duration.ofMillis(ttlMillis)
+            )
+
+            logger.info("Token blacklisted in Redis (TTL: ${ttlMillis}ms)")
+        } catch (ex: Exception) {
+            logger.error("Failed to blacklist token in Redis: ${ex.message}", ex)
+            // Don't throw - we prefer to continue even if blacklisting fails
+            // The token will still expire naturally
+        }
     }
-    
-    fun isTokenBlacklisted(token: String): Boolean = tokenBlacklist.contains(token)
+
+    /**
+     * Checks if token is blacklisted in Redis.
+     *
+     * This is called on every request, so it must be fast.
+     * Redis provides O(1) lookup performance.
+     */
+    fun isTokenBlacklisted(token: String): Boolean {
+        return try {
+            val tokenHash = token.hashCode().toString()
+            val blacklistKey = "${keyPrefix}blacklist:token:$tokenHash"
+            val isBlacklisted = redisTemplate.hasKey(blacklistKey)
+
+            if (isBlacklisted) {
+                logger.debug("Token found in blacklist")
+            }
+
+            isBlacklisted
+        } catch (ex: Exception) {
+            logger.error("Failed to check token blacklist in Redis: ${ex.message}", ex)
+            // Fail open - if Redis is down, allow the request
+            // The token will still be validated for signature and expiration
+            false
+        }
+    }
     
     /**
      * Gets remaining token validity for monitoring and UI feedback.
