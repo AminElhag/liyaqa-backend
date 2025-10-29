@@ -26,7 +26,14 @@ enum class Permission {
     TENANT_DELETE,
     TENANT_SUSPEND,
     TENANT_ACCESS_DATA, // Can access tenant's data for support
-    
+
+    // Facility Management
+    FACILITY_VIEW,
+    FACILITY_CREATE,
+    FACILITY_UPDATE,
+    FACILITY_DELETE,
+    FACILITY_MANAGE_BRANCHES, // Can add/edit/delete branches
+
     // Support Operations
     SUPPORT_VIEW_TICKETS,
     SUPPORT_HANDLE_TICKETS,

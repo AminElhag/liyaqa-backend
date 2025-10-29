@@ -331,4 +331,234 @@
             <column name="subdomain"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 008: Create Sport Facilities Table -->
+    <changeSet id="008-create-sport-facilities-table" author="liyaqa">
+        <comment>
+            Create sport_facilities table to represent sports clubs/facilities that belong to tenants.
+            Each tenant can have multiple sport facilities (clubs), and each facility can have multiple branches.
+        </comment>
+
+        <createTable tableName="sport_facilities">
+            <!-- Primary Key -->
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Foreign Key to Tenant -->
+            <column name="owner_tenant_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_facility_tenant"
+                             references="tenants(id)"/>
+            </column>
+
+            <!-- Basic Information -->
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT"/>
+
+            <column name="facility_type" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Contact Information -->
+            <column name="contact_email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="contact_phone" type="VARCHAR(50)"/>
+
+            <column name="website" type="VARCHAR(255)"/>
+
+            <!-- Social Media -->
+            <column name="social_facebook" type="VARCHAR(255)"/>
+            <column name="social_instagram" type="VARCHAR(255)"/>
+            <column name="social_twitter" type="VARCHAR(255)"/>
+
+            <!-- Business Information -->
+            <column name="established_date" type="DATE"/>
+            <column name="registration_number" type="VARCHAR(100)"/>
+
+            <!-- Amenities (JSON or comma-separated) -->
+            <column name="amenities" type="TEXT"/>
+
+            <!-- Operating Hours (JSON format) -->
+            <column name="operating_hours" type="TEXT"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Settings -->
+            <column name="timezone" type="VARCHAR(50)" defaultValue="UTC"/>
+            <column name="locale" type="VARCHAR(10)" defaultValue="en_US"/>
+            <column name="currency" type="VARCHAR(3)" defaultValue="USD"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="created_by_id" type="UUID">
+                <constraints foreignKeyName="fk_facility_created_by"
+                             references="internal_employees(id)"/>
+            </column>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="sport_facilities" indexName="idx_facility_tenant">
+            <column name="owner_tenant_id"/>
+        </createIndex>
+
+        <createIndex tableName="sport_facilities" indexName="idx_facility_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="sport_facilities" indexName="idx_facility_type">
+            <column name="facility_type"/>
+        </createIndex>
+
+        <createIndex tableName="sport_facilities" indexName="idx_facility_name">
+            <column name="name"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Changeset 009: Create Facility Branches Table -->
+    <changeSet id="009-create-facility-branches-table" author="liyaqa">
+        <comment>
+            Create facility_branches table to represent physical locations/branches of sport facilities.
+            Each sport facility can have multiple branches (locations).
+        </comment>
+
+        <createTable tableName="facility_branches">
+            <!-- Primary Key -->
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Foreign Key to Sport Facility -->
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_branch_facility"
+                             references="sport_facilities(id)
+                             ON DELETE CASCADE"/>
+            </column>
+
+            <!-- Basic Information -->
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT"/>
+
+            <column name="is_main_branch" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Address -->
+            <column name="address_line1" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="address_line2" type="VARCHAR(255)"/>
+
+            <column name="city" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="state_province" type="VARCHAR(100)"/>
+
+            <column name="postal_code" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="country" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Geographic Coordinates -->
+            <column name="latitude" type="DECIMAL(10, 8)"/>
+            <column name="longitude" type="DECIMAL(11, 8)"/>
+
+            <!-- Contact Information -->
+            <column name="contact_email" type="VARCHAR(255)"/>
+            <column name="contact_phone" type="VARCHAR(50)"/>
+
+            <!-- Capacity & Facilities -->
+            <column name="total_courts" type="INTEGER" defaultValueNumeric="0"/>
+            <column name="total_capacity" type="INTEGER" defaultValueNumeric="0"/>
+
+            <!-- Amenities specific to this branch -->
+            <column name="amenities" type="TEXT"/>
+
+            <!-- Operating Hours (JSON format) -->
+            <column name="operating_hours" type="TEXT"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Settings -->
+            <column name="timezone" type="VARCHAR(50)" defaultValue="UTC"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="created_by_id" type="UUID">
+                <constraints foreignKeyName="fk_branch_created_by"
+                             references="internal_employees(id)"/>
+            </column>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="facility_branches" indexName="idx_branch_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="facility_branches" indexName="idx_branch_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="facility_branches" indexName="idx_branch_main">
+            <column name="is_main_branch"/>
+        </createIndex>
+
+        <createIndex tableName="facility_branches" indexName="idx_branch_city">
+            <column name="city"/>
+        </createIndex>
+
+        <createIndex tableName="facility_branches" indexName="idx_branch_postal_code">
+            <column name="postal_code"/>
+        </createIndex>
+
+        <!-- Composite index for geographic queries -->
+        <createIndex tableName="facility_branches" indexName="idx_branch_coordinates">
+            <column name="latitude"/>
+            <column name="longitude"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
