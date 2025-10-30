@@ -199,4 +199,94 @@ interface FacilityEmployeeRepository : JpaRepository<FacilityEmployee, UUID> {
         ORDER BY COUNT(e) DESC
     """)
     fun countByDepartmentGrouped(@Param("facilityId") facilityId: UUID): List<Array<Any>>
+
+    // ========== BRANCH-BASED QUERIES ==========
+
+    /**
+     * Find employees assigned to a specific branch.
+     */
+    @Query("""
+        SELECT e FROM FacilityEmployee e
+        JOIN e.assignedBranches b
+        WHERE b.id = :branchId
+        ORDER BY e.lastName ASC, e.firstName ASC
+    """)
+    fun findByAssignedBranchId(@Param("branchId") branchId: UUID): List<FacilityEmployee>
+
+    /**
+     * Find active employees assigned to a specific branch.
+     */
+    @Query("""
+        SELECT e FROM FacilityEmployee e
+        JOIN e.assignedBranches b
+        WHERE b.id = :branchId
+        AND e.status = 'ACTIVE'
+        ORDER BY e.lastName ASC, e.firstName ASC
+    """)
+    fun findActiveByAssignedBranchId(@Param("branchId") branchId: UUID): List<FacilityEmployee>
+
+    /**
+     * Find employees with no branch assignments (have access to all branches).
+     */
+    @Query("""
+        SELECT e FROM FacilityEmployee e
+        WHERE e.facility.id = :facilityId
+        AND SIZE(e.assignedBranches) = 0
+        ORDER BY e.lastName ASC, e.firstName ASC
+    """)
+    fun findWithNoBranchAssignments(@Param("facilityId") facilityId: UUID): List<FacilityEmployee>
+
+    /**
+     * Count employees assigned to a specific branch.
+     */
+    @Query("""
+        SELECT COUNT(e) FROM FacilityEmployee e
+        JOIN e.assignedBranches b
+        WHERE b.id = :branchId
+    """)
+    fun countByAssignedBranchId(@Param("branchId") branchId: UUID): Long
+
+    /**
+     * Count active employees assigned to a specific branch.
+     */
+    @Query("""
+        SELECT COUNT(e) FROM FacilityEmployee e
+        JOIN e.assignedBranches b
+        WHERE b.id = :branchId
+        AND e.status = 'ACTIVE'
+    """)
+    fun countActiveByAssignedBranchId(@Param("branchId") branchId: UUID): Long
+
+    /**
+     * Check if employee is assigned to a specific branch.
+     */
+    @Query("""
+        SELECT CASE WHEN COUNT(b) > 0 THEN TRUE ELSE FALSE END
+        FROM FacilityEmployee e
+        JOIN e.assignedBranches b
+        WHERE e.id = :employeeId
+        AND b.id = :branchId
+    """)
+    fun isAssignedToBranch(
+        @Param("employeeId") employeeId: UUID,
+        @Param("branchId") branchId: UUID
+    ): Boolean
+
+    /**
+     * Find employees by facility and branch assignment.
+     * If branchId is null, returns all employees of the facility.
+     */
+    @Query("""
+        SELECT DISTINCT e FROM FacilityEmployee e
+        LEFT JOIN e.assignedBranches b
+        WHERE e.facility.id = :facilityId
+        AND (:branchId IS NULL
+            OR b.id = :branchId
+            OR SIZE(e.assignedBranches) = 0)
+        ORDER BY e.lastName ASC, e.firstName ASC
+    """)
+    fun findByFacilityAndBranch(
+        @Param("facilityId") facilityId: UUID,
+        @Param("branchId") branchId: UUID?
+    ): List<FacilityEmployee>
 }

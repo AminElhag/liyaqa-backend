@@ -1,7 +1,8 @@
 package com.liyaqa.backend.facility.employee.domain
 
 import com.liyaqa.backend.core.domain.base.BaseEntity
-import com.liyaqa.backend.internal.domain.facility.SportFacility
+import com.liyaqa.backend.internal.facility.domain.SportFacility
+import com.liyaqa.backend.internal.facility.domain.FacilityBranch
 import jakarta.persistence.*
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import org.springframework.security.core.GrantedAuthority
@@ -118,6 +119,17 @@ class FacilityEmployee(
         inverseJoinColumns = [JoinColumn(name = "group_id")]
     )
     var groups: MutableSet<FacilityEmployeeGroup> = mutableSetOf(),
+
+    // === Branch Assignments ===
+    // Employees can be assigned to specific branches within their facility
+    // If empty, employee has access to all branches
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "facility_employee_branches",
+        joinColumns = [JoinColumn(name = "employee_id")],
+        inverseJoinColumns = [JoinColumn(name = "branch_id")]
+    )
+    var assignedBranches: MutableSet<FacilityBranch> = mutableSetOf(),
 
     // === Settings ===
     @Column(length = 50)

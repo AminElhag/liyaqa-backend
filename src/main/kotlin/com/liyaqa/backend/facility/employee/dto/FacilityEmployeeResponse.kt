@@ -39,6 +39,9 @@ data class FacilityEmployeeResponse(
     val groups: List<FacilityEmployeeGroupBasicResponse>,
     val permissions: Set<FacilityPermission>,
 
+    val assignedBranches: List<BranchBasicInfo>,
+    val hasAccessToAllBranches: Boolean,
+
     val timezone: String,
     val locale: String,
 
@@ -71,11 +74,34 @@ data class FacilityEmployeeResponse(
                 lastLoginIp = employee.lastLoginIp,
                 groups = employee.groups.map { FacilityEmployeeGroupBasicResponse.from(it) },
                 permissions = employee.getAllPermissions(),
+                assignedBranches = employee.assignedBranches.map { BranchBasicInfo.from(it) },
+                hasAccessToAllBranches = employee.assignedBranches.isEmpty(),
                 timezone = employee.timezone,
                 locale = employee.locale,
                 createdAt = employee.createdAt,
                 updatedAt = employee.updatedAt,
                 version = employee.version
+            )
+        }
+    }
+}
+
+/**
+ * Basic branch information for employee response.
+ */
+data class BranchBasicInfo(
+    val id: UUID,
+    val name: String,
+    val city: String,
+    val isMainBranch: Boolean
+) {
+    companion object {
+        fun from(branch: com.liyaqa.backend.internal.facility.domain.FacilityBranch): BranchBasicInfo {
+            return BranchBasicInfo(
+                id = branch.id!!,
+                name = branch.name,
+                city = branch.city,
+                isMainBranch = branch.isMainBranch
             )
         }
     }

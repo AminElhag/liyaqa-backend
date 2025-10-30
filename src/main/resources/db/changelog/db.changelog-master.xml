@@ -586,4 +586,43 @@
             <column name="is_system_account"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 016: Create Facility Employee Branch Assignments Junction Table -->
+    <changeSet id="016-create-facility-employee-branches-table" author="liyaqa">
+        <comment>
+            Create facility_employee_branches junction table to support branch-level employee assignments.
+            Employees can be assigned to specific branches within their facility.
+            If no assignments exist, the employee has access to all branches.
+        </comment>
+
+        <createTable tableName="facility_employee_branches">
+            <column name="employee_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_fac_emp_branch_employee"
+                             references="facility_employees(id)"
+                             deleteCascade="true"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_fac_emp_branch_branch"
+                             references="facility_branches(id)"
+                             deleteCascade="true"/>
+            </column>
+        </createTable>
+
+        <!-- Composite primary key -->
+        <addPrimaryKey tableName="facility_employee_branches"
+                       columnNames="employee_id,branch_id"
+                       constraintName="pk_facility_employee_branches"/>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="facility_employee_branches" indexName="idx_fac_emp_branch_employee">
+            <column name="employee_id"/>
+        </createIndex>
+
+        <createIndex tableName="facility_employee_branches" indexName="idx_fac_emp_branch_branch">
+            <column name="branch_id"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
