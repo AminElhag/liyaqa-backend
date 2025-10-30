@@ -169,4 +169,90 @@ class FacilityEmployeeController(
         val employee = employeeService.changePassword(id, request)
         return ResponseEntity.ok(employee)
     }
+
+    // ========== BRANCH ASSIGNMENT ENDPOINTS ==========
+
+    /**
+     * Assign employee to specific branches.
+     * POST /api/v1/facility/employees/{id}/branches/assign
+     *
+     * Example Request:
+     * {
+     *   "branchIds": ["uuid1", "uuid2"]
+     * }
+     */
+    @PostMapping("/{id}/branches/assign")
+    fun assignToBranches(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: AssignBranchesRequest
+    ): ResponseEntity<BranchAssignmentResponse> {
+        val result = employeeService.assignToBranches(id, request)
+        return ResponseEntity.ok(result)
+    }
+
+    /**
+     * Remove employee from specific branches.
+     * POST /api/v1/facility/employees/{id}/branches/remove
+     *
+     * Example Request:
+     * {
+     *   "branchIds": ["uuid1", "uuid2"]
+     * }
+     */
+    @PostMapping("/{id}/branches/remove")
+    fun removeFromBranches(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: RemoveBranchesRequest
+    ): ResponseEntity<BranchAssignmentResponse> {
+        val result = employeeService.removeFromBranches(id, request)
+        return ResponseEntity.ok(result)
+    }
+
+    /**
+     * Clear all branch assignments (grants access to all branches).
+     * DELETE /api/v1/facility/employees/{id}/branches
+     */
+    @DeleteMapping("/{id}/branches")
+    fun clearBranchAssignments(
+        @PathVariable id: UUID
+    ): ResponseEntity<BranchAssignmentResponse> {
+        val result = employeeService.clearBranchAssignments(id)
+        return ResponseEntity.ok(result)
+    }
+
+    /**
+     * Get employees by branch.
+     * GET /api/v1/facility/employees/by-branch/{branchId}
+     */
+    @GetMapping("/by-branch/{branchId}")
+    fun getEmployeesByBranch(
+        @PathVariable branchId: UUID
+    ): ResponseEntity<List<FacilityEmployeeResponse>> {
+        val employees = employeeService.getEmployeesByBranch(branchId)
+        return ResponseEntity.ok(employees)
+    }
+
+    /**
+     * Get active employees by branch.
+     * GET /api/v1/facility/employees/by-branch/{branchId}/active
+     */
+    @GetMapping("/by-branch/{branchId}/active")
+    fun getActiveEmployeesByBranch(
+        @PathVariable branchId: UUID
+    ): ResponseEntity<List<FacilityEmployeeResponse>> {
+        val employees = employeeService.getActiveEmployeesByBranch(branchId)
+        return ResponseEntity.ok(employees)
+    }
+
+    /**
+     * Get employees with access to all branches (no branch assignments).
+     * GET /api/v1/facility/employees/by-facility/{facilityId}/all-branch-access
+     */
+    @GetMapping("/by-facility/{facilityId}/all-branch-access")
+    fun getEmployeesWithAllBranchAccess(
+        @PathVariable facilityId: UUID
+    ): ResponseEntity<List<FacilityEmployeeResponse>> {
+        val employees = employeeService.getEmployeesWithAllBranchAccess(facilityId)
+        return ResponseEntity.ok(employees)
+    }
 }

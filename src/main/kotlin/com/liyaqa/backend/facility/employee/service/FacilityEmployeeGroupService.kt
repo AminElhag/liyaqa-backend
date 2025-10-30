@@ -5,7 +5,7 @@ import com.liyaqa.backend.facility.employee.dto.FacilityEmployeeGroupCreateReque
 import com.liyaqa.backend.facility.employee.dto.FacilityEmployeeGroupResponse
 import com.liyaqa.backend.facility.employee.dto.FacilityEmployeeGroupUpdateRequest
 import com.liyaqa.backend.facility.employee.repository.FacilityEmployeeGroupRepository
-import com.liyaqa.backend.internal.repository.SportFacilityRepository
+import com.liyaqa.backend.internal.facility.data.SportFacilityRepository
 import jakarta.persistence.EntityNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service

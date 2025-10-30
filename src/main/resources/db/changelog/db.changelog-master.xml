@@ -586,4 +586,427 @@
             <column name="is_system_account"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 016: Create Facility Employee Branch Assignments Junction Table -->
+    <changeSet id="016-create-facility-employee-branches-table" author="liyaqa">
+        <comment>
+            Create facility_employee_branches junction table to support branch-level employee assignments.
+            Employees can be assigned to specific branches within their facility.
+            If no assignments exist, the employee has access to all branches.
+        </comment>
+
+        <createTable tableName="facility_employee_branches">
+            <column name="employee_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_fac_emp_branch_employee"
+                             references="facility_employees(id)"
+                             deleteCascade="true"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_fac_emp_branch_branch"
+                             references="facility_branches(id)"
+                             deleteCascade="true"/>
+            </column>
+        </createTable>
+
+        <!-- Composite primary key -->
+        <addPrimaryKey tableName="facility_employee_branches"
+                       columnNames="employee_id,branch_id"
+                       constraintName="pk_facility_employee_branches"/>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="facility_employee_branches" indexName="idx_fac_emp_branch_employee">
+            <column name="employee_id"/>
+        </createIndex>
+
+        <createIndex tableName="facility_employee_branches" indexName="idx_fac_emp_branch_branch">
+            <column name="branch_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Changeset 017: Create Members Table -->
+    <changeSet id="017-create-members-table" author="liyaqa">
+        <comment>
+            Create members table for facility customers who can book and purchase memberships.
+        </comment>
+
+        <createTable tableName="members">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Tenant and Facility -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_member_facility"
+                             references="sport_facilities(id)"/>
+            </column>
+
+            <!-- Basic Information -->
+            <column name="first_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="last_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="phone_number" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Identification -->
+            <column name="member_number" type="VARCHAR(50)"/>
+            <column name="date_of_birth" type="DATE"/>
+            <column name="gender" type="VARCHAR(10)"/>
+            <column name="national_id" type="VARCHAR(100)"/>
+
+            <!-- Address -->
+            <column name="address_line1" type="VARCHAR(255)"/>
+            <column name="address_line2" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(100)"/>
+            <column name="postal_code" type="VARCHAR(20)"/>
+            <column name="country" type="VARCHAR(100)"/>
+
+            <!-- Emergency Contact -->
+            <column name="emergency_contact_name" type="VARCHAR(255)"/>
+            <column name="emergency_contact_phone" type="VARCHAR(50)"/>
+            <column name="emergency_contact_relationship" type="VARCHAR(50)"/>
+
+            <!-- Medical Information -->
+            <column name="blood_type" type="VARCHAR(10)"/>
+            <column name="medical_conditions" type="TEXT"/>
+            <column name="allergies" type="TEXT"/>
+            <column name="medications" type="TEXT"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status_reason" type="TEXT"/>
+            <column name="status_changed_at" type="TIMESTAMP"/>
+
+            <!-- Preferences -->
+            <column name="preferred_language" type="VARCHAR(10)" defaultValue="en"/>
+            <column name="marketing_consent" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="sms_notifications" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="email_notifications" type="BOOLEAN" defaultValueBoolean="true"/>
+
+            <!-- Notes and Profile -->
+            <column name="notes" type="TEXT"/>
+            <column name="profile_picture_url" type="VARCHAR(500)"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes -->
+        <createIndex tableName="members" indexName="idx_member_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="members" indexName="idx_member_email">
+            <column name="email"/>
+        </createIndex>
+
+        <createIndex tableName="members" indexName="idx_member_phone">
+            <column name="phone_number"/>
+        </createIndex>
+
+        <createIndex tableName="members" indexName="idx_member_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="members" indexName="idx_member_member_number">
+            <column name="member_number"/>
+        </createIndex>
+
+        <!-- Unique Constraints -->
+        <addUniqueConstraint tableName="members"
+                             columnNames="facility_id,email"
+                             constraintName="uk_facility_member_email"/>
+
+        <addUniqueConstraint tableName="members"
+                             columnNames="facility_id,member_number"
+                             constraintName="uk_facility_member_number"/>
+    </changeSet>
+
+    <!-- Changeset 018: Create Membership Plans Table -->
+    <changeSet id="018-create-membership-plans-table" author="liyaqa">
+        <comment>
+            Create membership_plans table for branch-level membership offerings.
+        </comment>
+
+        <createTable tableName="membership_plans">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Tenant, Branch, and Facility -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_plan_branch"
+                             references="facility_branches(id)"/>
+            </column>
+
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_plan_facility"
+                             references="sport_facilities(id)"/>
+            </column>
+
+            <!-- Basic Information -->
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT"/>
+
+            <column name="plan_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Pricing -->
+            <column name="price" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="currency" type="VARCHAR(3)" defaultValue="USD">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="billing_cycle" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="duration_months" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Features & Benefits -->
+            <column name="features" type="TEXT"/>
+            <column name="max_bookings_per_month" type="INTEGER"/>
+            <column name="max_concurrent_bookings" type="INTEGER"/>
+            <column name="advance_booking_days" type="INTEGER"/>
+            <column name="cancellation_hours" type="INTEGER"/>
+            <column name="guest_passes" type="INTEGER"/>
+
+            <!-- Access Control -->
+            <column name="has_court_access" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="has_class_access" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="has_gym_access" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="has_locker_access" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="priority_level" type="INTEGER" defaultValueNumeric="0"/>
+
+            <!-- Discounts -->
+            <column name="setup_fee" type="DECIMAL(10,2)"/>
+            <column name="discount_percentage" type="DECIMAL(5,2)"/>
+
+            <!-- Status -->
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="is_visible" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="max_members" type="INTEGER"/>
+            <column name="current_members" type="INTEGER" defaultValueNumeric="0"/>
+
+            <!-- Terms -->
+            <column name="terms_and_conditions" type="TEXT"/>
+            <column name="auto_renew" type="BOOLEAN" defaultValueBoolean="true"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes -->
+        <createIndex tableName="membership_plans" indexName="idx_membership_plan_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <createIndex tableName="membership_plans" indexName="idx_membership_plan_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="membership_plans" indexName="idx_membership_plan_name">
+            <column name="name"/>
+        </createIndex>
+
+        <createIndex tableName="membership_plans" indexName="idx_membership_plan_status">
+            <column name="is_active"/>
+        </createIndex>
+
+        <!-- Unique Constraints -->
+        <addUniqueConstraint tableName="membership_plans"
+                             columnNames="branch_id,name"
+                             constraintName="uk_branch_plan_name"/>
+    </changeSet>
+
+    <!-- Changeset 019: Create Memberships Table -->
+    <changeSet id="019-create-memberships-table" author="liyaqa">
+        <comment>
+            Create memberships table linking members to membership plans with dates and payment info.
+        </comment>
+
+        <createTable tableName="memberships">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Tenant and Relationships -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="member_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_membership_member"
+                             references="members(id)"/>
+            </column>
+
+            <column name="plan_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_membership_plan"
+                             references="membership_plans(id)"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_membership_branch"
+                             references="facility_branches(id)"/>
+            </column>
+
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_membership_facility"
+                             references="sport_facilities(id)"/>
+            </column>
+
+            <!-- Membership Details -->
+            <column name="membership_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status_changed_at" type="TIMESTAMP"/>
+            <column name="status_reason" type="TEXT"/>
+
+            <!-- Pricing & Payment -->
+            <column name="price_paid" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="setup_fee_paid" type="DECIMAL(10,2)"/>
+
+            <column name="currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="payment_method" type="VARCHAR(50)"/>
+            <column name="payment_reference" type="VARCHAR(255)"/>
+            <column name="paid_at" type="TIMESTAMP"/>
+
+            <!-- Auto-Renewal -->
+            <column name="auto_renew" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="next_billing_date" type="DATE"/>
+            <column name="renewal_reminder_sent" type="BOOLEAN" defaultValueBoolean="false"/>
+
+            <!-- Usage Tracking -->
+            <column name="bookings_used" type="INTEGER" defaultValueNumeric="0"/>
+            <column name="guest_passes_used" type="INTEGER" defaultValueNumeric="0"/>
+            <column name="last_used_at" type="TIMESTAMP"/>
+
+            <!-- Cancellation -->
+            <column name="cancelled_at" type="TIMESTAMP"/>
+            <column name="cancelled_by" type="VARCHAR(255)"/>
+            <column name="cancellation_reason" type="TEXT"/>
+
+            <!-- Notes -->
+            <column name="notes" type="TEXT"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes -->
+        <createIndex tableName="memberships" indexName="idx_membership_member">
+            <column name="member_id"/>
+        </createIndex>
+
+        <createIndex tableName="memberships" indexName="idx_membership_plan">
+            <column name="plan_id"/>
+        </createIndex>
+
+        <createIndex tableName="memberships" indexName="idx_membership_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <createIndex tableName="memberships" indexName="idx_membership_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="memberships" indexName="idx_membership_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="memberships" indexName="idx_membership_start_date">
+            <column name="start_date"/>
+        </createIndex>
+
+        <createIndex tableName="memberships" indexName="idx_membership_end_date">
+            <column name="end_date"/>
+        </createIndex>
+
+        <createIndex tableName="memberships" indexName="idx_membership_number">
+            <column name="membership_number"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

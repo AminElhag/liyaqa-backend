@@ -5,7 +5,8 @@ import com.liyaqa.backend.facility.employee.domain.FacilityEmployeeStatus
 import com.liyaqa.backend.facility.employee.dto.*
 import com.liyaqa.backend.facility.employee.repository.FacilityEmployeeGroupRepository
 import com.liyaqa.backend.facility.employee.repository.FacilityEmployeeRepository
-import com.liyaqa.backend.internal.repository.SportFacilityRepository
+import com.liyaqa.backend.internal.facility.data.FacilityBranchRepository
+import com.liyaqa.backend.internal.facility.data.SportFacilityRepository
 import jakarta.persistence.EntityNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
@@ -27,6 +28,7 @@ class FacilityEmployeeService(
     private val employeeRepository: FacilityEmployeeRepository,
     private val groupRepository: FacilityEmployeeGroupRepository,
     private val facilityRepository: SportFacilityRepository,
+    private val branchRepository: FacilityBranchRepository,
     private val passwordEncoder: PasswordEncoder
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -289,5 +291,113 @@ class FacilityEmployeeService(
             employeeRepository.save(it)
             logger.warn("Failed login attempt for employee: ${it.getFullName()} (Attempt ${it.failedLoginAttempts}/5)")
         }
+    }
+
+    // ========== BRANCH ASSIGNMENT OPERATIONS ==========
+
+    /**
+     * Assign employee to specific branches.
+     *
+     * If assignedBranches is empty, employee has access to all branches.
+     * If assignedBranches contains branches, employee is limited to those branches only.
+     */
+    fun assignToBranches(employeeId: UUID, request: AssignBranchesRequest): BranchAssignmentResponse {
+        val employee = employeeRepository.findById(employeeId)
+            .orElseThrow { EntityNotFoundException("Employee not found: $employeeId") }
+
+        // Validate all branches belong to the same facility
+        val branches = request.branchIds.map { branchId ->
+            val branch = branchRepository.findById(branchId)
+                .orElseThrow { EntityNotFoundException("Branch not found: $branchId") }
+
+            if (branch.facility.id != employee.facility.id) {
+                throw IllegalArgumentException("Branch $branchId does not belong to employee's facility")
+            }
+            branch
+        }
+
+        // Add branches to employee's assigned branches
+        employee.assignedBranches.addAll(branches)
+        val savedEmployee = employeeRepository.save(employee)
+
+        logger.info("Employee ${savedEmployee.getFullName()} assigned to ${branches.size} branches")
+
+        return BranchAssignmentResponse(
+            employeeId = savedEmployee.id!!,
+            employeeName = savedEmployee.getFullName(),
+            assignedBranches = savedEmployee.assignedBranches.map { BranchBasicInfo.from(it) },
+            hasAccessToAllBranches = savedEmployee.assignedBranches.isEmpty(),
+            message = "Employee assigned to ${branches.size} branch(es)"
+        )
+    }
+
+    /**
+     * Remove employee from specific branches.
+     */
+    fun removeFromBranches(employeeId: UUID, request: RemoveBranchesRequest): BranchAssignmentResponse {
+        val employee = employeeRepository.findById(employeeId)
+            .orElseThrow { EntityNotFoundException("Employee not found: $employeeId") }
+
+        // Remove branches from employee's assigned branches
+        employee.assignedBranches.removeIf { it.id in request.branchIds }
+        val savedEmployee = employeeRepository.save(employee)
+
+        logger.info("Employee ${savedEmployee.getFullName()} removed from ${request.branchIds.size} branches")
+
+        return BranchAssignmentResponse(
+            employeeId = savedEmployee.id!!,
+            employeeName = savedEmployee.getFullName(),
+            assignedBranches = savedEmployee.assignedBranches.map { BranchBasicInfo.from(it) },
+            hasAccessToAllBranches = savedEmployee.assignedBranches.isEmpty(),
+            message = "Employee removed from ${request.branchIds.size} branch(es)"
+        )
+    }
+
+    /**
+     * Clear all branch assignments (grants access to all branches).
+     */
+    fun clearBranchAssignments(employeeId: UUID): BranchAssignmentResponse {
+        val employee = employeeRepository.findById(employeeId)
+            .orElseThrow { EntityNotFoundException("Employee not found: $employeeId") }
+
+        employee.assignedBranches.clear()
+        val savedEmployee = employeeRepository.save(employee)
+
+        logger.info("All branch assignments cleared for employee ${savedEmployee.getFullName()} - now has access to all branches")
+
+        return BranchAssignmentResponse(
+            employeeId = savedEmployee.id!!,
+            employeeName = savedEmployee.getFullName(),
+            assignedBranches = emptyList(),
+            hasAccessToAllBranches = true,
+            message = "Employee now has access to all branches"
+        )
+    }
+
+    /**
+     * Get employees by branch.
+     */
+    @Transactional(readOnly = true)
+    fun getEmployeesByBranch(branchId: UUID): List<FacilityEmployeeResponse> {
+        return employeeRepository.findByAssignedBranchId(branchId)
+            .map { FacilityEmployeeResponse.from(it) }
+    }
+
+    /**
+     * Get active employees by branch.
+     */
+    @Transactional(readOnly = true)
+    fun getActiveEmployeesByBranch(branchId: UUID): List<FacilityEmployeeResponse> {
+        return employeeRepository.findActiveByAssignedBranchId(branchId)
+            .map { FacilityEmployeeResponse.from(it) }
+    }
+
+    /**
+     * Get employees with no branch assignments (have access to all branches).
+     */
+    @Transactional(readOnly = true)
+    fun getEmployeesWithAllBranchAccess(facilityId: UUID): List<FacilityEmployeeResponse> {
+        return employeeRepository.findWithNoBranchAssignments(facilityId)
+            .map { FacilityEmployeeResponse.from(it) }
     }
 }

@@ -1,7 +1,7 @@
 package com.liyaqa.backend.facility.employee.domain
 
 import com.liyaqa.backend.core.domain.base.BaseEntity
-import com.liyaqa.backend.internal.domain.facility.SportFacility
+import com.liyaqa.backend.internal.facility.domain.SportFacility
 import jakarta.persistence.*
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 
