@@ -32,6 +32,9 @@ class Employee(
     @Column(nullable = false)
     var passwordHash: String,
 
+    @Column(unique = true, length = 50)
+    var employeeNumber: String? = null,
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     var status: EmployeeStatus = EmployeeStatus.ACTIVE,
@@ -44,6 +47,10 @@ class Employee(
 
     @Column(nullable = false)
     var jobTitle: String,
+
+    // Marks system-created accounts (like initial administrator)
+    @Column(nullable = false)
+    var isSystemAccount: Boolean = false,
 
     // For support metrics and workload management
     var maxConcurrentTickets: Int = 10,

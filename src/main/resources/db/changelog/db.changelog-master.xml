@@ -561,4 +561,29 @@
             <column name="longitude"/>
         </createIndex>
     </changeSet>
+
+    <!-- Employee enhancement for system initialization -->
+    <changeSet id="014-add-employee-number-column" author="liyaqa">
+        <addColumn tableName="internal_employees">
+            <column name="employee_number" type="VARCHAR(50)">
+                <constraints unique="true" nullable="true"/>
+            </column>
+        </addColumn>
+
+        <createIndex tableName="internal_employees" indexName="idx_employee_number">
+            <column name="employee_number"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="015-add-is-system-account-column" author="liyaqa">
+        <addColumn tableName="internal_employees">
+            <column name="is_system_account" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <createIndex tableName="internal_employees" indexName="idx_employee_system_account">
+            <column name="is_system_account"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

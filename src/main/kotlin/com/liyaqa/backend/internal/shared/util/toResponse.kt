@@ -10,6 +10,7 @@ fun Employee.toResponse() = EmployeeResponse(
     lastName = this.lastName,
     fullName = this.getFullName(),
     email = this.email,
+    employeeNumber = this.employeeNumber,
     status = this.status,
     department = this.department,
     jobTitle = this.jobTitle,
@@ -17,6 +18,8 @@ fun Employee.toResponse() = EmployeeResponse(
     groups = this.groups.map { GroupResponse(it.id!!, it.name, it.permissions) },
     permissions = this.getAllPermissions(),
     lastLoginAt = this.lastLoginAt,
+    failedLoginAttempts = this.failedLoginAttempts,
+    mustChangePassword = this.mustChangePassword,
     createdAt = this.createdAt,
     updatedAt = this.updatedAt
 )
