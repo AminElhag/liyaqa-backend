@@ -29,7 +29,12 @@ data class MembershipCreateRequest(
     val paymentReference: String? = null,
 
     val autoRenew: Boolean = false,
-    val notes: String? = null
+    val notes: String? = null,
+
+    // Discount support
+    val discountCode: String? = null, // Customer-entered promo code
+    val discountId: UUID? = null, // Employee-applied discount ID
+    val appliedByEmployeeId: UUID? = null // Employee who applied the discount
 )
 
 /**
