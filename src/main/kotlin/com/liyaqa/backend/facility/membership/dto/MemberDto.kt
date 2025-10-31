@@ -17,6 +17,9 @@ data class MemberCreateRequest(
     @field:NotBlank(message = "Facility ID is required")
     val facilityId: UUID,
 
+    @field:NotBlank(message = "Branch ID is required")
+    val branchId: UUID,
+
     @field:NotBlank(message = "First name is required")
     @field:Size(max = 100, message = "First name must not exceed 100 characters")
     val firstName: String,
@@ -109,6 +112,8 @@ data class MemberResponse(
     val id: UUID,
     val facilityId: UUID,
     val facilityName: String,
+    val branchId: UUID,
+    val branchName: String,
     val tenantId: String,
 
     val firstName: String,
@@ -159,6 +164,8 @@ data class MemberResponse(
                 id = member.id!!,
                 facilityId = member.facility.id!!,
                 facilityName = member.facility.name,
+                branchId = member.branch.id!!,
+                branchName = member.branch.name,
                 tenantId = member.tenantId,
                 firstName = member.firstName,
                 lastName = member.lastName,
@@ -207,6 +214,8 @@ data class MemberBasicResponse(
     val email: String,
     val phoneNumber: String,
     val memberNumber: String?,
+    val branchId: UUID,
+    val branchName: String,
     val status: MemberStatus,
     val createdAt: Instant
 ) {
@@ -218,6 +227,8 @@ data class MemberBasicResponse(
                 email = member.email,
                 phoneNumber = member.phoneNumber,
                 memberNumber = member.memberNumber,
+                branchId = member.branch.id!!,
+                branchName = member.branch.name,
                 status = member.status,
                 createdAt = member.createdAt
             )

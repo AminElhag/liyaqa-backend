@@ -182,4 +182,123 @@ class MemberController(
         val member = memberService.banMember(id, request)
         return ResponseEntity.ok(member)
     }
+
+    // ===== Branch-Level Endpoints =====
+
+    /**
+     * Get all members for a branch.
+     * GET /api/v1/facility/members/by-branch/{branchId}
+     */
+    @GetMapping("/by-branch/{branchId}")
+    fun getMembersByBranch(
+        @PathVariable branchId: UUID
+    ): ResponseEntity<List<MemberResponse>> {
+        val members = memberService.getMembersByBranch(branchId)
+        return ResponseEntity.ok(members)
+    }
+
+    /**
+     * Get active members for a branch.
+     * GET /api/v1/facility/members/by-branch/{branchId}/active
+     */
+    @GetMapping("/by-branch/{branchId}/active")
+    fun getActiveMembersByBranch(
+        @PathVariable branchId: UUID
+    ): ResponseEntity<List<MemberResponse>> {
+        val members = memberService.getActiveMembersByBranch(branchId)
+        return ResponseEntity.ok(members)
+    }
+
+    /**
+     * Get members by branch and status.
+     * GET /api/v1/facility/members/by-branch/{branchId}/by-status
+     */
+    @GetMapping("/by-branch/{branchId}/by-status")
+    fun getMembersByBranchAndStatus(
+        @PathVariable branchId: UUID,
+        @RequestParam status: MemberStatus
+    ): ResponseEntity<List<MemberResponse>> {
+        val members = memberService.getMembersByBranchAndStatus(branchId, status)
+        return ResponseEntity.ok(members)
+    }
+
+    /**
+     * Search members within a branch.
+     * GET /api/v1/facility/members/by-branch/{branchId}/search
+     */
+    @GetMapping("/by-branch/{branchId}/search")
+    fun searchMembersByBranch(
+        @PathVariable branchId: UUID,
+        @RequestParam(required = false) searchTerm: String?,
+        @RequestParam(required = false) status: MemberStatus?,
+        @PageableDefault(size = 20, sort = ["lastName", "firstName"], direction = Sort.Direction.ASC) pageable: Pageable
+    ): ResponseEntity<Page<MemberBasicResponse>> {
+        val members = memberService.searchMembersByBranch(branchId, searchTerm, status, pageable)
+        return ResponseEntity.ok(members)
+    }
+
+    /**
+     * Find member by email in branch.
+     * GET /api/v1/facility/members/by-branch/{branchId}/by-email
+     */
+    @GetMapping("/by-branch/{branchId}/by-email")
+    fun findMemberByEmailInBranch(
+        @PathVariable branchId: UUID,
+        @RequestParam email: String
+    ): ResponseEntity<MemberResponse> {
+        val member = memberService.findMemberByEmailInBranch(branchId, email)
+            ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(member)
+    }
+
+    /**
+     * Find member by member number in branch.
+     * GET /api/v1/facility/members/by-branch/{branchId}/by-number
+     */
+    @GetMapping("/by-branch/{branchId}/by-number")
+    fun findMemberByMemberNumberInBranch(
+        @PathVariable branchId: UUID,
+        @RequestParam memberNumber: String
+    ): ResponseEntity<MemberResponse> {
+        val member = memberService.findMemberByMemberNumberInBranch(branchId, memberNumber)
+            ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(member)
+    }
+
+    /**
+     * Count members by branch.
+     * GET /api/v1/facility/members/by-branch/{branchId}/count
+     */
+    @GetMapping("/by-branch/{branchId}/count")
+    fun countMembersByBranch(
+        @PathVariable branchId: UUID
+    ): ResponseEntity<Long> {
+        val count = memberService.countMembersByBranch(branchId)
+        return ResponseEntity.ok(count)
+    }
+
+    /**
+     * Count active members by branch.
+     * GET /api/v1/facility/members/by-branch/{branchId}/count/active
+     */
+    @GetMapping("/by-branch/{branchId}/count/active")
+    fun countActiveMembersByBranch(
+        @PathVariable branchId: UUID
+    ): ResponseEntity<Long> {
+        val count = memberService.countActiveMembersByBranch(branchId)
+        return ResponseEntity.ok(count)
+    }
+
+    /**
+     * Count members by branch and status.
+     * GET /api/v1/facility/members/by-branch/{branchId}/count/by-status
+     */
+    @GetMapping("/by-branch/{branchId}/count/by-status")
+    fun countMembersByBranchAndStatus(
+        @PathVariable branchId: UUID,
+        @RequestParam status: MemberStatus
+    ): ResponseEntity<Long> {
+        val count = memberService.countMembersByBranchAndStatus(branchId, status)
+        return ResponseEntity.ok(count)
+    }
 }
