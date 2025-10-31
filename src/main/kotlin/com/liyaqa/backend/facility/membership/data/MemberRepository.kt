@@ -154,4 +154,149 @@ interface MemberRepository : JpaRepository<Member, UUID> {
      * Find members by tenant ID.
      */
     fun findByTenantId(tenantId: String): List<Member>
+
+    // ===== Branch-Level Queries =====
+
+    /**
+     * Find member by email and branch.
+     */
+    @Query("""
+        SELECT m FROM Member m
+        WHERE m.branch.id = :branchId
+        AND m.email = :email
+    """)
+    fun findByBranchIdAndEmail(
+        @Param("branchId") branchId: UUID,
+        @Param("email") email: String
+    ): Member?
+
+    /**
+     * Find member by member number and branch.
+     */
+    @Query("""
+        SELECT m FROM Member m
+        WHERE m.branch.id = :branchId
+        AND m.memberNumber = :memberNumber
+    """)
+    fun findByBranchIdAndMemberNumber(
+        @Param("branchId") branchId: UUID,
+        @Param("memberNumber") memberNumber: String
+    ): Member?
+
+    /**
+     * Check if email exists for branch.
+     */
+    @Query("""
+        SELECT CASE WHEN COUNT(m) > 0 THEN TRUE ELSE FALSE END
+        FROM Member m
+        WHERE m.branch.id = :branchId
+        AND m.email = :email
+    """)
+    fun existsByBranchIdAndEmail(
+        @Param("branchId") branchId: UUID,
+        @Param("email") email: String
+    ): Boolean
+
+    /**
+     * Check if member number exists for branch.
+     */
+    @Query("""
+        SELECT CASE WHEN COUNT(m) > 0 THEN TRUE ELSE FALSE END
+        FROM Member m
+        WHERE m.branch.id = :branchId
+        AND m.memberNumber = :memberNumber
+    """)
+    fun existsByBranchIdAndMemberNumber(
+        @Param("branchId") branchId: UUID,
+        @Param("memberNumber") memberNumber: String
+    ): Boolean
+
+    /**
+     * Find members by branch.
+     */
+    @Query("""
+        SELECT m FROM Member m
+        WHERE m.branch.id = :branchId
+        ORDER BY m.lastName ASC, m.firstName ASC
+    """)
+    fun findByBranchId(@Param("branchId") branchId: UUID): List<Member>
+
+    /**
+     * Find active members by branch.
+     */
+    @Query("""
+        SELECT m FROM Member m
+        WHERE m.branch.id = :branchId
+        AND m.status = 'ACTIVE'
+        ORDER BY m.lastName ASC, m.firstName ASC
+    """)
+    fun findActiveByBranchId(@Param("branchId") branchId: UUID): List<Member>
+
+    /**
+     * Find members by branch and status.
+     */
+    @Query("""
+        SELECT m FROM Member m
+        WHERE m.branch.id = :branchId
+        AND m.status = :status
+        ORDER BY m.lastName ASC, m.firstName ASC
+    """)
+    fun findByBranchIdAndStatus(
+        @Param("branchId") branchId: UUID,
+        @Param("status") status: MemberStatus
+    ): List<Member>
+
+    /**
+     * Search members within a branch with filters.
+     */
+    @Query("""
+        SELECT m FROM Member m
+        WHERE m.branch.id = :branchId
+        AND (:searchTerm IS NULL
+            OR LOWER(m.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+            OR LOWER(m.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+            OR LOWER(m.email) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+            OR LOWER(m.phoneNumber) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+            OR LOWER(m.memberNumber) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
+        AND (:status IS NULL OR m.status = :status)
+        ORDER BY m.lastName ASC, m.firstName ASC
+    """)
+    fun searchMembersByBranch(
+        @Param("branchId") branchId: UUID,
+        @Param("searchTerm") searchTerm: String?,
+        @Param("status") status: MemberStatus?,
+        pageable: Pageable
+    ): Page<Member>
+
+    /**
+     * Count members by branch.
+     */
+    @Query("""
+        SELECT COUNT(m) FROM Member m
+        WHERE m.branch.id = :branchId
+    """)
+    fun countByBranchId(@Param("branchId") branchId: UUID): Long
+
+    /**
+     * Count active members by branch.
+     */
+    @Query("""
+        SELECT COUNT(m) FROM Member m
+        WHERE m.branch.id = :branchId
+        AND m.status = 'ACTIVE'
+    """)
+    fun countActiveByBranchId(@Param("branchId") branchId: UUID): Long
+
+    /**
+     * Count members by branch and status.
+     */
+    @Query("""
+        SELECT COUNT(m) FROM Member m
+        WHERE m.branch.id = :branchId
+        AND m.status = :status
+    """)
+    fun countByBranchIdAndStatus(
+        @Param("branchId") branchId: UUID,
+        @Param("status") status: MemberStatus
+    ): Long
 }

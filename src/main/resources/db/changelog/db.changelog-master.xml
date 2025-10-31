@@ -1228,4 +1228,45 @@
             <column name="tenant_id"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 024: Update members table for branch-level scoping -->
+    <changeSet id="024-add-branch-to-members" author="liyaqa">
+        <comment>
+            Add branch_id column to members table and update unique constraints
+            to support branch-level member scoping. Members are now unique per branch
+            instead of per facility.
+        </comment>
+
+        <!-- Add branch_id column -->
+        <addColumn tableName="members">
+            <column name="branch_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_member_branch"
+                             references="facility_branches(id)"/>
+            </column>
+        </addColumn>
+
+        <!-- Add index for branch_id -->
+        <createIndex tableName="members" indexName="idx_member_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <!-- Add tenant_id index -->
+        <createIndex tableName="members" indexName="idx_member_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <!-- Drop old facility-level unique constraints -->
+        <dropUniqueConstraint tableName="members" constraintName="uk_facility_member_email"/>
+        <dropUniqueConstraint tableName="members" constraintName="uk_facility_member_number"/>
+
+        <!-- Add new branch-level unique constraints -->
+        <addUniqueConstraint tableName="members"
+                             columnNames="branch_id,email"
+                             constraintName="uk_branch_member_email"/>
+
+        <addUniqueConstraint tableName="members"
+                             columnNames="branch_id,member_number"
+                             constraintName="uk_branch_member_number"/>
+    </changeSet>
 </databaseChangeLog>

@@ -5,6 +5,7 @@ import com.liyaqa.backend.facility.membership.domain.Member
 import com.liyaqa.backend.facility.membership.domain.MemberStatus
 import com.liyaqa.backend.facility.membership.dto.*
 import com.liyaqa.backend.internal.facility.data.SportFacilityRepository
+import com.liyaqa.backend.internal.facility.data.FacilityBranchRepository
 import jakarta.persistence.EntityNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
@@ -21,7 +22,8 @@ import java.util.*
 @Transactional
 class MemberService(
     private val memberRepository: MemberRepository,
-    private val facilityRepository: SportFacilityRepository
+    private val facilityRepository: SportFacilityRepository,
+    private val branchRepository: FacilityBranchRepository
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -33,15 +35,23 @@ class MemberService(
         val facility = facilityRepository.findById(request.facilityId)
             .orElseThrow { EntityNotFoundException("Facility not found: ${request.facilityId}") }
 
-        // Check for duplicate email
-        if (memberRepository.existsByFacilityIdAndEmail(request.facilityId, request.email)) {
-            throw IllegalArgumentException("Email '${request.email}' already exists for this facility")
+        // Validate branch exists and belongs to facility
+        val branch = branchRepository.findById(request.branchId)
+            .orElseThrow { EntityNotFoundException("Branch not found: ${request.branchId}") }
+
+        if (branch.facility.id != facility.id) {
+            throw IllegalArgumentException("Branch does not belong to the specified facility")
         }
 
-        // Check for duplicate member number if provided
+        // Check for duplicate email (branch-scoped)
+        if (memberRepository.existsByBranchIdAndEmail(request.branchId, request.email)) {
+            throw IllegalArgumentException("Email '${request.email}' already exists for this branch")
+        }
+
+        // Check for duplicate member number if provided (branch-scoped)
         request.memberNumber?.let {
-            if (memberRepository.existsByFacilityIdAndMemberNumber(request.facilityId, it)) {
-                throw IllegalArgumentException("Member number '$it' already exists for this facility")
+            if (memberRepository.existsByBranchIdAndMemberNumber(request.branchId, it)) {
+                throw IllegalArgumentException("Member number '$it' already exists for this branch")
             }
         }
 
@@ -50,6 +60,7 @@ class MemberService(
 
         val member = Member(
             facility = facility,
+            branch = branch,
             firstName = request.firstName,
             lastName = request.lastName,
             email = request.email,
@@ -108,8 +119,8 @@ class MemberService(
         request.lastName?.let { member.lastName = it }
 
         request.email?.let {
-            if (it != member.email && memberRepository.existsByFacilityIdAndEmail(member.facility.id!!, it)) {
-                throw IllegalArgumentException("Email '$it' already exists for this facility")
+            if (it != member.email && memberRepository.existsByBranchIdAndEmail(member.branch.id!!, it)) {
+                throw IllegalArgumentException("Email '$it' already exists for this branch")
             }
             member.email = it
         }
@@ -117,8 +128,8 @@ class MemberService(
         request.phoneNumber?.let { member.phoneNumber = it }
 
         request.memberNumber?.let {
-            if (it != member.memberNumber && memberRepository.existsByFacilityIdAndMemberNumber(member.facility.id!!, it)) {
-                throw IllegalArgumentException("Member number '$it' already exists for this facility")
+            if (it != member.memberNumber && memberRepository.existsByBranchIdAndMemberNumber(member.branch.id!!, it)) {
+                throw IllegalArgumentException("Member number '$it' already exists for this branch")
             }
             member.memberNumber = it
         }
@@ -269,6 +280,91 @@ class MemberService(
     fun findMemberByMemberNumber(facilityId: UUID, memberNumber: String): MemberResponse? {
         return memberRepository.findByFacilityIdAndMemberNumber(facilityId, memberNumber)
             ?.let { MemberResponse.from(it) }
+    }
+
+    // ===== Branch-Level Operations =====
+
+    /**
+     * Get members by branch.
+     */
+    @Transactional(readOnly = true)
+    fun getMembersByBranch(branchId: UUID): List<MemberResponse> {
+        return memberRepository.findByBranchId(branchId)
+            .map { MemberResponse.from(it) }
+    }
+
+    /**
+     * Get active members by branch.
+     */
+    @Transactional(readOnly = true)
+    fun getActiveMembersByBranch(branchId: UUID): List<MemberResponse> {
+        return memberRepository.findActiveByBranchId(branchId)
+            .map { MemberResponse.from(it) }
+    }
+
+    /**
+     * Get members by branch and status.
+     */
+    @Transactional(readOnly = true)
+    fun getMembersByBranchAndStatus(branchId: UUID, status: MemberStatus): List<MemberResponse> {
+        return memberRepository.findByBranchIdAndStatus(branchId, status)
+            .map { MemberResponse.from(it) }
+    }
+
+    /**
+     * Search members within a branch.
+     */
+    @Transactional(readOnly = true)
+    fun searchMembersByBranch(
+        branchId: UUID,
+        searchTerm: String?,
+        status: MemberStatus?,
+        pageable: Pageable
+    ): Page<MemberBasicResponse> {
+        val page = memberRepository.searchMembersByBranch(branchId, searchTerm, status, pageable)
+        return page.map { MemberBasicResponse.from(it) }
+    }
+
+    /**
+     * Find member by email in branch.
+     */
+    @Transactional(readOnly = true)
+    fun findMemberByEmailInBranch(branchId: UUID, email: String): MemberResponse? {
+        return memberRepository.findByBranchIdAndEmail(branchId, email)
+            ?.let { MemberResponse.from(it) }
+    }
+
+    /**
+     * Find member by member number in branch.
+     */
+    @Transactional(readOnly = true)
+    fun findMemberByMemberNumberInBranch(branchId: UUID, memberNumber: String): MemberResponse? {
+        return memberRepository.findByBranchIdAndMemberNumber(branchId, memberNumber)
+            ?.let { MemberResponse.from(it) }
+    }
+
+    /**
+     * Count members by branch.
+     */
+    @Transactional(readOnly = true)
+    fun countMembersByBranch(branchId: UUID): Long {
+        return memberRepository.countByBranchId(branchId)
+    }
+
+    /**
+     * Count active members by branch.
+     */
+    @Transactional(readOnly = true)
+    fun countActiveMembersByBranch(branchId: UUID): Long {
+        return memberRepository.countActiveByBranchId(branchId)
+    }
+
+    /**
+     * Count members by branch and status.
+     */
+    @Transactional(readOnly = true)
+    fun countMembersByBranchAndStatus(branchId: UUID, status: MemberStatus): Long {
+        return memberRepository.countByBranchIdAndStatus(branchId, status)
     }
 
     /**

@@ -2,6 +2,7 @@ package com.liyaqa.backend.facility.membership.domain
 
 import com.liyaqa.backend.core.domain.base.BaseEntity
 import com.liyaqa.backend.internal.facility.domain.SportFacility
+import com.liyaqa.backend.internal.facility.domain.FacilityBranch
 import jakarta.persistence.*
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.Instant
@@ -26,14 +27,16 @@ import java.time.LocalDate
     name = "members",
     indexes = [
         Index(name = "idx_member_facility", columnList = "facility_id"),
+        Index(name = "idx_member_branch", columnList = "branch_id"),
         Index(name = "idx_member_email", columnList = "email"),
         Index(name = "idx_member_phone", columnList = "phone_number"),
         Index(name = "idx_member_status", columnList = "status"),
-        Index(name = "idx_member_member_number", columnList = "member_number")
+        Index(name = "idx_member_member_number", columnList = "member_number"),
+        Index(name = "idx_member_tenant", columnList = "tenant_id")
     ],
     uniqueConstraints = [
-        UniqueConstraint(name = "uk_facility_member_email", columnNames = ["facility_id", "email"]),
-        UniqueConstraint(name = "uk_facility_member_number", columnNames = ["facility_id", "member_number"])
+        UniqueConstraint(name = "uk_branch_member_email", columnNames = ["branch_id", "email"]),
+        UniqueConstraint(name = "uk_branch_member_number", columnNames = ["branch_id", "member_number"])
     ]
 )
 @EntityListeners(AuditingEntityListener::class)
@@ -42,6 +45,11 @@ class Member(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "facility_id", nullable = false)
     var facility: SportFacility,
+
+    // Branch this member belongs to (branch-level scoping)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id", nullable = false)
+    var branch: FacilityBranch,
 
     // === Basic Information ===
     @Column(name = "first_name", nullable = false)
