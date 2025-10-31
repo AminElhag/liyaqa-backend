@@ -1009,4 +1009,223 @@
             <column name="membership_number"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 020: Create discounts table -->
+    <changeSet id="020-create-discounts-table" author="claude">
+        <createTable tableName="discounts">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="varchar(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="name" type="varchar(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text">
+                <constraints nullable="true"/>
+            </column>
+            <column name="discount_type" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="decimal(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="varchar(3)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="application_method" type="varchar(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scope" type="varchar(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="facility_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_discount_facility" references="sport_facilities(id)"/>
+            </column>
+            <column name="branch_id" type="uuid">
+                <constraints nullable="true" foreignKeyName="fk_discount_branch" references="facility_branches(id)"/>
+            </column>
+            <column name="valid_from" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_until" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_active" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="max_total_usage" type="integer">
+                <constraints nullable="true"/>
+            </column>
+            <column name="max_usage_per_member" type="integer">
+                <constraints nullable="true"/>
+            </column>
+            <column name="current_usage_count" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="min_purchase_amount" type="decimal(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="max_discount_amount" type="decimal(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="internal_notes" type="text">
+                <constraints nullable="true"/>
+            </column>
+            <column name="tenant_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Indexes for discounts -->
+        <createIndex tableName="discounts" indexName="idx_discount_code">
+            <column name="code"/>
+        </createIndex>
+
+        <createIndex tableName="discounts" indexName="idx_discount_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="discounts" indexName="idx_discount_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <createIndex tableName="discounts" indexName="idx_discount_active">
+            <column name="is_active"/>
+        </createIndex>
+
+        <createIndex tableName="discounts" indexName="idx_discount_dates">
+            <column name="valid_from"/>
+            <column name="valid_until"/>
+        </createIndex>
+
+        <createIndex tableName="discounts" indexName="idx_discount_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <!-- Unique constraint -->
+        <addUniqueConstraint tableName="discounts" columnNames="code,facility_id" constraintName="uk_discount_code_facility"/>
+    </changeSet>
+
+    <!-- Changeset 021: Create discount_applicable_plans junction table -->
+    <changeSet id="021-create-discount-applicable-plans-table" author="claude">
+        <createTable tableName="discount_applicable_plans">
+            <column name="discount_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_discount_applicable_plans_discount" references="discounts(id)"/>
+            </column>
+            <column name="plan_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_discount_applicable_plans_plan" references="membership_plans(id)"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="discount_applicable_plans" columnNames="discount_id,plan_id" constraintName="pk_discount_applicable_plans"/>
+
+        <createIndex tableName="discount_applicable_plans" indexName="idx_discount_applicable_discount">
+            <column name="discount_id"/>
+        </createIndex>
+
+        <createIndex tableName="discount_applicable_plans" indexName="idx_discount_applicable_plan">
+            <column name="plan_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Changeset 022: Create discount_applicable_types table -->
+    <changeSet id="022-create-discount-applicable-types-table" author="claude">
+        <createTable tableName="discount_applicable_types">
+            <column name="discount_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_discount_applicable_types_discount" references="discounts(id)"/>
+            </column>
+            <column name="plan_type" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="discount_applicable_types" indexName="idx_discount_types_discount">
+            <column name="discount_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Changeset 023: Create discount_usages table -->
+    <changeSet id="023-create-discount-usages-table" author="claude">
+        <createTable tableName="discount_usages">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="discount_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_usage_discount" references="discounts(id)"/>
+            </column>
+            <column name="member_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_usage_member" references="members(id)"/>
+            </column>
+            <column name="membership_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_usage_membership" references="memberships(id)"/>
+            </column>
+            <column name="facility_id" type="uuid">
+                <constraints nullable="false" foreignKeyName="fk_usage_facility" references="sport_facilities(id)"/>
+            </column>
+            <column name="original_price" type="decimal(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="discount_amount" type="decimal(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="final_price" type="decimal(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="applied_by_employee_id" type="uuid">
+                <constraints nullable="true" foreignKeyName="fk_usage_employee" references="employees(id)"/>
+            </column>
+            <column name="notes" type="text">
+                <constraints nullable="true"/>
+            </column>
+            <column name="tenant_id" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Indexes for discount_usages -->
+        <createIndex tableName="discount_usages" indexName="idx_usage_discount">
+            <column name="discount_id"/>
+        </createIndex>
+
+        <createIndex tableName="discount_usages" indexName="idx_usage_member">
+            <column name="member_id"/>
+        </createIndex>
+
+        <createIndex tableName="discount_usages" indexName="idx_usage_membership">
+            <column name="membership_id"/>
+        </createIndex>
+
+        <createIndex tableName="discount_usages" indexName="idx_usage_employee">
+            <column name="applied_by_employee_id"/>
+        </createIndex>
+
+        <createIndex tableName="discount_usages" indexName="idx_usage_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="discount_usages" indexName="idx_usage_date">
+            <column name="used_at"/>
+        </createIndex>
+
+        <createIndex tableName="discount_usages" indexName="idx_usage_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

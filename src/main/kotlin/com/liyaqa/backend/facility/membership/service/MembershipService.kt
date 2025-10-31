@@ -3,6 +3,7 @@ package com.liyaqa.backend.facility.membership.service
 import com.liyaqa.backend.facility.membership.data.MemberRepository
 import com.liyaqa.backend.facility.membership.data.MembershipPlanRepository
 import com.liyaqa.backend.facility.membership.data.MembershipRepository
+import com.liyaqa.backend.facility.membership.data.DiscountRepository
 import com.liyaqa.backend.facility.membership.domain.Membership
 import com.liyaqa.backend.facility.membership.domain.MembershipStatus
 import com.liyaqa.backend.facility.membership.dto.*
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
@@ -24,7 +26,9 @@ import java.util.*
 class MembershipService(
     private val membershipRepository: MembershipRepository,
     private val memberRepository: MemberRepository,
-    private val planRepository: MembershipPlanRepository
+    private val planRepository: MembershipPlanRepository,
+    private val discountRepository: DiscountRepository,
+    private val discountService: DiscountService
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -56,8 +60,46 @@ class MembershipService(
         val endDate = startDate.plusMonths(plan.durationMonths.toLong())
 
         // Use provided price or plan's effective price
-        val pricePaid = request.pricePaid ?: plan.getEffectivePrice()
+        var originalPrice = request.pricePaid ?: plan.getEffectivePrice()
+        var finalPrice = originalPrice
         val setupFeePaid = request.setupFeePaid ?: plan.setupFee
+
+        // Handle discount application
+        var appliedDiscount: com.liyaqa.backend.facility.membership.domain.Discount? = null
+
+        if (request.discountCode != null) {
+            // Customer entered a promo code
+            val discount = discountRepository.findValidDiscountByCode(request.discountCode, member.facility.id!!)
+            if (discount != null) {
+                // Validate discount for this member and plan
+                val validation = discountService.validateDiscount(
+                    ValidateDiscountRequest(
+                        code = request.discountCode,
+                        memberId = member.id!!,
+                        planId = plan.id!!,
+                        originalPrice = originalPrice
+                    )
+                )
+
+                if (validation.isValid) {
+                    finalPrice = validation.finalPrice
+                    appliedDiscount = discount
+                    logger.info("Discount code '${request.discountCode}' applied: ${validation.discountAmount} off")
+                } else {
+                    logger.warn("Discount code '${request.discountCode}' validation failed: ${validation.errorMessage}")
+                }
+            } else {
+                logger.warn("Invalid discount code: ${request.discountCode}")
+            }
+        } else if (request.discountId != null) {
+            // Employee applied a discount
+            val discount = discountRepository.findById(request.discountId).orElse(null)
+            if (discount != null && discount.isCurrentlyValid() && discount.isApplicableToPlan(plan)) {
+                finalPrice = discount.calculateFinalPrice(originalPrice)
+                appliedDiscount = discount
+                logger.info("Employee discount '${discount.name}' applied by employee ${request.appliedByEmployeeId}")
+            }
+        }
 
         // Generate membership number
         val membershipNumber = generateMembershipNumber()
@@ -70,7 +112,7 @@ class MembershipService(
             membershipNumber = membershipNumber,
             startDate = startDate,
             endDate = endDate,
-            pricePaid = pricePaid,
+            pricePaid = finalPrice, // Use discounted price
             setupFeePaid = setupFeePaid,
             currency = plan.currency,
             paymentMethod = request.paymentMethod,
@@ -89,7 +131,24 @@ class MembershipService(
 
         val savedMembership = membershipRepository.save(membership)
 
-        logger.info("Membership created: ${membershipNumber} for member ${member.getFullName()} - Plan: ${plan.name}")
+        // Record discount usage if discount was applied
+        if (appliedDiscount != null) {
+            discountService.recordDiscountUsage(
+                discount = appliedDiscount,
+                member = member,
+                membership = savedMembership,
+                originalPrice = originalPrice,
+                appliedByEmployeeId = request.appliedByEmployeeId,
+                notes = "Applied during membership creation"
+            )
+        }
+
+        val logMessage = if (appliedDiscount != null) {
+            "Membership created: ${membershipNumber} for member ${member.getFullName()} - Plan: ${plan.name} - Discount applied: ${appliedDiscount.name} (Original: $originalPrice, Final: $finalPrice)"
+        } else {
+            "Membership created: ${membershipNumber} for member ${member.getFullName()} - Plan: ${plan.name}"
+        }
+        logger.info(logMessage)
 
         return MembershipResponse.from(savedMembership)
     }
