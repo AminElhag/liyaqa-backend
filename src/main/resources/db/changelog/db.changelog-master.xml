@@ -1269,4 +1269,286 @@
                              columnNames="branch_id,member_number"
                              constraintName="uk_branch_member_number"/>
     </changeSet>
+
+    <!-- Changeset 025: Create Courts Table -->
+    <changeSet id="025-create-courts-table" author="liyaqa">
+        <comment>
+            Create courts table for bookable resources (tennis courts, padel courts, etc.)
+        </comment>
+
+        <createTable tableName="courts">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Tenant and Facility/Branch -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_court_facility"
+                             references="sport_facilities(id)"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_court_branch"
+                             references="facility_branches(id)"/>
+            </column>
+
+            <!-- Basic Information -->
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT"/>
+
+            <column name="court_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Specifications -->
+            <column name="surface_type" type="VARCHAR(50)"/>
+            <column name="is_indoor" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="has_lighting" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="max_players" type="INTEGER" defaultValueNumeric="4"/>
+
+            <!-- Pricing -->
+            <column name="hourly_rate" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="currency" type="VARCHAR(3)" defaultValue="USD"/>
+            <column name="peak_hour_rate" type="DECIMAL(10,2)"/>
+
+            <!-- Booking Settings -->
+            <column name="min_booking_duration" type="INTEGER" defaultValueNumeric="60"/>
+            <column name="max_booking_duration" type="INTEGER" defaultValueNumeric="120"/>
+            <column name="booking_interval" type="INTEGER" defaultValueNumeric="30"/>
+            <column name="advance_booking_days" type="INTEGER" defaultValueNumeric="14"/>
+            <column name="cancellation_hours" type="INTEGER" defaultValueNumeric="24"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="maintenance_notes" type="TEXT"/>
+
+            <!-- Amenities -->
+            <column name="amenities" type="TEXT"/>
+
+            <!-- Display -->
+            <column name="display_order" type="INTEGER" defaultValueNumeric="0"/>
+            <column name="image_url" type="VARCHAR(500)"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Indexes -->
+        <createIndex tableName="courts" indexName="idx_court_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <createIndex tableName="courts" indexName="idx_court_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="courts" indexName="idx_court_type">
+            <column name="court_type"/>
+        </createIndex>
+
+        <createIndex tableName="courts" indexName="idx_court_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="courts" indexName="idx_court_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <!-- Unique Constraints -->
+        <addUniqueConstraint tableName="courts"
+                             columnNames="branch_id,name"
+                             constraintName="uk_branch_court_name"/>
+    </changeSet>
+
+    <!-- Changeset 026: Create Bookings Table -->
+    <changeSet id="026-create-bookings-table" author="liyaqa">
+        <comment>
+            Create bookings table for court reservations/bookings
+        </comment>
+
+        <createTable tableName="bookings">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Tenant and Relationships -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="member_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_booking_member"
+                             references="members(id)"/>
+            </column>
+
+            <column name="court_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_booking_court"
+                             references="courts(id)"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_booking_branch"
+                             references="facility_branches(id)"/>
+            </column>
+
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_booking_facility"
+                             references="sport_facilities(id)"/>
+            </column>
+
+            <column name="membership_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_booking_membership"
+                             references="memberships(id)"/>
+            </column>
+
+            <!-- Booking Details -->
+            <column name="booking_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="booking_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="start_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="end_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="duration_minutes" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="CONFIRMED">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status_reason" type="TEXT"/>
+            <column name="status_changed_at" type="TIMESTAMP"/>
+
+            <!-- Pricing -->
+            <column name="original_price" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="discount_amount" type="DECIMAL(10,2)" defaultValueNumeric="0"/>
+
+            <column name="final_price" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Payment -->
+            <column name="payment_status" type="VARCHAR(50)" defaultValue="PENDING"/>
+            <column name="payment_method" type="VARCHAR(50)"/>
+            <column name="payment_reference" type="VARCHAR(255)"/>
+            <column name="paid_at" type="TIMESTAMP"/>
+
+            <!-- Participants -->
+            <column name="number_of_players" type="INTEGER" defaultValueNumeric="2"/>
+            <column name="additional_players" type="TEXT"/>
+            <column name="special_requests" type="TEXT"/>
+
+            <!-- Cancellation -->
+            <column name="cancelled_at" type="TIMESTAMP"/>
+            <column name="cancelled_by" type="VARCHAR(255)"/>
+            <column name="cancellation_reason" type="TEXT"/>
+            <column name="refund_amount" type="DECIMAL(10,2)"/>
+
+            <!-- Check-in/Check-out -->
+            <column name="checked_in_at" type="TIMESTAMP"/>
+            <column name="checked_out_at" type="TIMESTAMP"/>
+
+            <!-- Notes -->
+            <column name="notes" type="TEXT"/>
+
+            <!-- Notifications -->
+            <column name="reminder_sent" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="confirmation_sent" type="BOOLEAN" defaultValueBoolean="false"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Indexes -->
+        <createIndex tableName="bookings" indexName="idx_booking_member">
+            <column name="member_id"/>
+        </createIndex>
+
+        <createIndex tableName="bookings" indexName="idx_booking_court">
+            <column name="court_id"/>
+        </createIndex>
+
+        <createIndex tableName="bookings" indexName="idx_booking_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <createIndex tableName="bookings" indexName="idx_booking_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="bookings" indexName="idx_booking_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="bookings" indexName="idx_booking_date">
+            <column name="booking_date"/>
+        </createIndex>
+
+        <createIndex tableName="bookings" indexName="idx_booking_start_time">
+            <column name="start_time"/>
+        </createIndex>
+
+        <createIndex tableName="bookings" indexName="idx_booking_number">
+            <column name="booking_number"/>
+        </createIndex>
+
+        <createIndex tableName="bookings" indexName="idx_booking_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <!-- Unique Constraints -->
+        <addUniqueConstraint tableName="bookings"
+                             columnNames="booking_number"
+                             constraintName="uk_booking_number"/>
+    </changeSet>
 </databaseChangeLog>
