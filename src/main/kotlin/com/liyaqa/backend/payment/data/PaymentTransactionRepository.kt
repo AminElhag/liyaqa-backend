@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
@@ -160,4 +161,20 @@ interface PaymentTransactionRepository : JpaRepository<PaymentTransaction, UUID>
         @Param("endDate") endDate: LocalDateTime?,
         pageable: Pageable
     ): Page<PaymentTransaction>
+
+    /**
+     * Find transactions by tenantId and created date range (for analytics).
+     */
+    @Query("""
+        SELECT pt FROM PaymentTransaction pt
+        WHERE pt.tenantId = :tenantId
+        AND pt.createdAt >= :startDate
+        AND pt.createdAt <= :endDate
+        ORDER BY pt.createdAt ASC
+    """)
+    fun findByTenantIdAndCreatedAtBetween(
+        @Param("tenantId") tenantId: String,
+        @Param("startDate") startDate: Instant,
+        @Param("endDate") endDate: Instant
+    ): List<PaymentTransaction>
 }

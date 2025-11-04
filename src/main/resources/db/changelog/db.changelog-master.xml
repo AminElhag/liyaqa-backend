@@ -1826,4 +1826,329 @@
             <column name="email_verified"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 030: Notification System -->
+    <changeSet id="030-create-notification-system" author="liyaqa">
+        <comment>
+            Create comprehensive notification system with multi-channel delivery,
+            template management, user preferences, and delivery tracking.
+        </comment>
+
+        <!-- Notifications Table -->
+        <createTable tableName="notifications">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recipient_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recipient_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recipient_email" type="VARCHAR(255)"/>
+            <column name="recipient_phone" type="VARCHAR(50)"/>
+            <column name="recipient_name" type="VARCHAR(255)"/>
+            <column name="type" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="channel" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="priority" type="VARCHAR(50)" defaultValue="MEDIUM">
+                <constraints nullable="false"/>
+            </column>
+            <column name="subject" type="VARCHAR(500)"/>
+            <column name="message" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="html_content" type="TEXT"/>
+            <column name="template_id" type="VARCHAR(100)"/>
+            <column name="template_variables" type="TEXT"/>
+            <column name="status" type="VARCHAR(50)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_at" type="TIMESTAMP"/>
+            <column name="delivered_at" type="TIMESTAMP"/>
+            <column name="read_at" type="TIMESTAMP"/>
+            <column name="failed_at" type="TIMESTAMP"/>
+            <column name="error_message" type="TEXT"/>
+            <column name="retry_count" type="INTEGER" defaultValue="0"/>
+            <column name="max_retries" type="INTEGER" defaultValue="3"/>
+            <column name="scheduled_at" type="TIMESTAMP"/>
+            <column name="expires_at" type="TIMESTAMP"/>
+            <column name="context_type" type="VARCHAR(100)"/>
+            <column name="context_id" type="UUID"/>
+            <column name="metadata" type="TEXT"/>
+            <column name="provider" type="VARCHAR(100)"/>
+            <column name="provider_message_id" type="VARCHAR(255)"/>
+            <column name="provider_response" type="TEXT"/>
+            <column name="click_tracked" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="clicked_at" type="TIMESTAMP"/>
+            <column name="unsubscribed" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="unsubscribed_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="notifications" indexName="idx_notification_recipient">
+            <column name="recipient_type"/>
+            <column name="recipient_id"/>
+        </createIndex>
+        <createIndex tableName="notifications" indexName="idx_notification_tenant">
+            <column name="tenant_id"/>
+            <column name="created_at"/>
+        </createIndex>
+        <createIndex tableName="notifications" indexName="idx_notification_status">
+            <column name="status"/>
+            <column name="created_at"/>
+        </createIndex>
+        <createIndex tableName="notifications" indexName="idx_notification_channel">
+            <column name="channel"/>
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="notifications" indexName="idx_notification_type">
+            <column name="type"/>
+            <column name="created_at"/>
+        </createIndex>
+        <createIndex tableName="notifications" indexName="idx_notification_scheduled">
+            <column name="scheduled_at"/>
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Notification Templates Table -->
+        <createTable tableName="notification_templates">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tenant_id" type="VARCHAR(100)"/>
+            <column name="template_code" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="notification_type" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="channel" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="language" type="VARCHAR(10)" defaultValue="en"/>
+            <column name="subject_template" type="VARCHAR(500)"/>
+            <column name="body_template" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="html_template" type="TEXT"/>
+            <column name="variables" type="TEXT"/>
+            <column name="example_data" type="TEXT"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="version" type="INTEGER" defaultValue="1"/>
+            <column name="priority" type="VARCHAR(50)" defaultValue="MEDIUM"/>
+            <column name="max_retries" type="INTEGER" defaultValue="3"/>
+            <column name="ab_test_variant" type="VARCHAR(50)"/>
+            <column name="ab_test_weight" type="DOUBLE"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="notification_templates" indexName="idx_template_code" unique="true">
+            <column name="template_code"/>
+            <column name="tenant_id"/>
+        </createIndex>
+        <createIndex tableName="notification_templates" indexName="idx_template_type">
+            <column name="notification_type"/>
+            <column name="channel"/>
+        </createIndex>
+        <createIndex tableName="notification_templates" indexName="idx_template_active">
+            <column name="is_active"/>
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <!-- Notification Preferences Table -->
+        <createTable tableName="notification_preferences">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email_enabled" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="sms_enabled" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="push_enabled" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="in_app_enabled" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="transactional_enabled" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="operational_enabled" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="marketing_enabled" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="reminder_enabled" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="type_overrides" type="TEXT"/>
+            <column name="quiet_hours_enabled" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="quiet_hours_start" type="INTEGER"/>
+            <column name="quiet_hours_end" type="INTEGER"/>
+            <column name="quiet_hours_timezone" type="VARCHAR(50)"/>
+            <column name="digest_mode_enabled" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="digest_frequency" type="VARCHAR(50)"/>
+            <column name="preferred_language" type="VARCHAR(10)" defaultValue="en"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="phone_number" type="VARCHAR(50)"/>
+            <column name="device_tokens" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="notification_preferences" indexName="idx_notif_pref_user" unique="true">
+            <column name="user_type"/>
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="notification_preferences" indexName="idx_notif_pref_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Changeset 031: Analytics and Reporting System -->
+    <changeSet id="031-create-analytics-reporting-system" author="liyaqa">
+        <comment>
+            Create reports table for scheduled and ad-hoc analytics reporting.
+            Supports multiple report types, scheduling, and various output formats.
+        </comment>
+
+        <!-- Reports Table -->
+        <createTable tableName="reports">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Report Definition -->
+            <column name="report_type" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT"/>
+
+            <!-- Time Range -->
+            <column name="start_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="end_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="period_type" type="VARCHAR(50)"/>
+
+            <!-- Filters -->
+            <column name="facility_id" type="UUID"/>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_report_branch"
+                             references="facility_branches(id)"/>
+            </column>
+
+            <column name="filters" type="TEXT"/>
+
+            <!-- Generation Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="generated_at" type="TIMESTAMP"/>
+
+            <column name="generation_duration_ms" type="BIGINT"/>
+
+            <column name="error_message" type="TEXT"/>
+
+            <!-- Results -->
+            <column name="data" type="TEXT"/>
+
+            <column name="summary" type="TEXT"/>
+
+            <column name="file_path" type="VARCHAR(500)"/>
+
+            <column name="format" type="VARCHAR(50)" defaultValue="JSON">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Scheduling -->
+            <column name="is_scheduled" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="schedule_frequency" type="VARCHAR(50)"/>
+
+            <column name="next_run_at" type="TIMESTAMP"/>
+
+            <column name="last_run_at" type="TIMESTAMP"/>
+
+            <column name="recipient_emails" type="TEXT"/>
+
+            <column name="notify_on_completion" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Metadata -->
+            <column name="created_by_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_report_created_by"
+                             references="internal_employees(id)"/>
+            </column>
+
+            <column name="created_by_name" type="VARCHAR(255)"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="reports" indexName="idx_report_tenant">
+            <column name="tenant_id"/>
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex tableName="reports" indexName="idx_report_type">
+            <column name="report_type"/>
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex tableName="reports" indexName="idx_report_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="reports" indexName="idx_report_schedule">
+            <column name="is_scheduled"/>
+            <column name="next_run_at"/>
+        </createIndex>
+
+        <createIndex tableName="reports" indexName="idx_report_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <createIndex tableName="reports" indexName="idx_report_created_by">
+            <column name="created_by_id"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
