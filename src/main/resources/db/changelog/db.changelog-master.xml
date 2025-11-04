@@ -1564,4 +1564,188 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <!-- Changeset 028: Create Payment Transactions Table -->
+    <changeSet id="028-create-payment-transactions-table" author="liyaqa">
+        <comment>
+            Create payment_transactions table for tracking all payment operations across different gateways.
+            Supports multiple payment gateways (Stripe, PayPal, etc.) with gateway-agnostic tracking.
+            Includes full audit trail, refund tracking, and multi-tenancy support.
+        </comment>
+
+        <createTable tableName="payment_transactions">
+            <!-- Primary Key -->
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Relationships -->
+            <column name="booking_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_payment_booking"
+                             references="bookings(id)"/>
+            </column>
+
+            <column name="membership_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_payment_membership"
+                             references="memberships(id)"/>
+            </column>
+
+            <column name="member_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_payment_member"
+                             references="members(id)"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_payment_branch"
+                             references="facility_branches(id)"/>
+            </column>
+
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_payment_facility"
+                             references="sport_facilities(id)"/>
+            </column>
+
+            <!-- Transaction Details -->
+            <column name="transaction_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="transaction_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Gateway Information -->
+            <column name="gateway" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="gateway_payment_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="gateway_client_secret" type="VARCHAR(500)"/>
+
+            <!-- Amount Information -->
+            <column name="amount" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="original_amount" type="DECIMAL(10,2)"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status_message" type="TEXT"/>
+
+            <!-- Payment Method Details -->
+            <column name="payment_method" type="VARCHAR(50)"/>
+            <column name="payment_brand" type="VARCHAR(50)"/>
+            <column name="last_four" type="VARCHAR(4)"/>
+
+            <!-- Timing -->
+            <column name="authorized_at" type="TIMESTAMP"/>
+            <column name="captured_at" type="TIMESTAMP"/>
+            <column name="failed_at" type="TIMESTAMP"/>
+            <column name="refunded_at" type="TIMESTAMP"/>
+
+            <!-- Refund Information -->
+            <column name="refund_amount" type="DECIMAL(10,2)"/>
+            <column name="refund_reason" type="VARCHAR(100)"/>
+
+            <column name="parent_transaction_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_payment_parent"
+                             references="payment_transactions(id)"/>
+            </column>
+
+            <!-- Receipt and Records -->
+            <column name="receipt_url" type="VARCHAR(500)"/>
+            <column name="receipt_number" type="VARCHAR(100)"/>
+
+            <!-- Metadata -->
+            <column name="description" type="TEXT"/>
+            <column name="customer_email" type="VARCHAR(255)"/>
+            <column name="metadata" type="TEXT"/>
+
+            <!-- Error Details -->
+            <column name="error_code" type="VARCHAR(100)"/>
+            <column name="error_message" type="TEXT"/>
+            <column name="decline_code" type="VARCHAR(100)"/>
+
+            <!-- Idempotency -->
+            <column name="idempotency_key" type="VARCHAR(255)"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="payment_transactions" indexName="idx_payment_booking">
+            <column name="booking_id"/>
+        </createIndex>
+
+        <createIndex tableName="payment_transactions" indexName="idx_payment_member">
+            <column name="member_id"/>
+        </createIndex>
+
+        <createIndex tableName="payment_transactions" indexName="idx_payment_gateway_ref">
+            <column name="gateway"/>
+            <column name="gateway_payment_id"/>
+        </createIndex>
+
+        <createIndex tableName="payment_transactions" indexName="idx_payment_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="payment_transactions" indexName="idx_payment_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <createIndex tableName="payment_transactions" indexName="idx_payment_created">
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex tableName="payment_transactions" indexName="idx_payment_transaction_number">
+            <column name="transaction_number"/>
+        </createIndex>
+
+        <createIndex tableName="payment_transactions" indexName="idx_payment_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <createIndex tableName="payment_transactions" indexName="idx_payment_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <!-- Unique Constraints -->
+        <addUniqueConstraint tableName="payment_transactions"
+                             columnNames="transaction_number"
+                             constraintName="uk_payment_transaction_number"/>
+
+        <addUniqueConstraint tableName="payment_transactions"
+                             columnNames="gateway,gateway_payment_id"
+                             constraintName="uk_gateway_payment_id"/>
+    </changeSet>
 </databaseChangeLog>
