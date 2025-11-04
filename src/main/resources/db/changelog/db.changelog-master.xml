@@ -2151,4 +2151,119 @@
             <column name="created_by_id"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 032: Public API - API Keys -->
+    <changeSet id="032-create-public-api-keys" author="liyaqa">
+        <comment>
+            Create API keys table for Public API v1 authentication.
+            Enables external integrations to access platform functionality securely.
+        </comment>
+
+        <!-- API Keys Table -->
+        <createTable tableName="api_keys">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Key Information -->
+            <column name="key_prefix" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="key_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="description" type="TEXT"/>
+
+            <!-- Ownership -->
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_apikey_facility"
+                             references="sport_facilities(id)"/>
+            </column>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Permissions -->
+            <column name="scopes" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Rate Limiting -->
+            <column name="rate_limit_per_hour" type="INTEGER" defaultValueNumeric="1000"/>
+
+            <column name="rate_limit_per_day" type="INTEGER" defaultValueNumeric="10000"/>
+
+            <!-- Expiration -->
+            <column name="expires_at" type="TIMESTAMP"/>
+
+            <!-- Usage Tracking -->
+            <column name="last_used_at" type="TIMESTAMP"/>
+
+            <column name="total_requests" type="BIGINT" defaultValueNumeric="0"/>
+
+            <!-- Environment -->
+            <column name="environment" type="VARCHAR(20)" defaultValue="LIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Metadata -->
+            <column name="created_by_id" type="UUID">
+                <constraints nullable="true"
+                             foreignKeyName="fk_apikey_created_by"
+                             references="internal_employees(id)"/>
+            </column>
+
+            <column name="created_by_name" type="VARCHAR(255)"/>
+
+            <column name="revoked_at" type="TIMESTAMP"/>
+
+            <column name="revoked_by_id" type="UUID"/>
+
+            <column name="revoked_reason" type="TEXT"/>
+
+            <!-- Audit Fields -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="api_keys" indexName="idx_apikey_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <createIndex tableName="api_keys" indexName="idx_apikey_prefix">
+            <column name="key_prefix"/>
+        </createIndex>
+
+        <createIndex tableName="api_keys" indexName="idx_apikey_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="api_keys" indexName="idx_apikey_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="api_keys" indexName="idx_apikey_expires">
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
