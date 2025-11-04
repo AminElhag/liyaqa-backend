@@ -1551,4 +1551,17 @@
                              columnNames="booking_number"
                              constraintName="uk_booking_number"/>
     </changeSet>
+
+    <!-- Changeset 027: Add Court Booking Discount to Membership Plans -->
+    <changeSet id="027-add-court-booking-discount-to-membership-plans" author="liyaqa">
+        <comment>
+            Add court_booking_discount field to membership_plans table to enable percentage discounts on court bookings
+        </comment>
+
+        <addColumn tableName="membership_plans">
+            <column name="court_booking_discount" type="DECIMAL(5,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

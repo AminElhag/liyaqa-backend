@@ -524,7 +524,11 @@ class EmailService(
      * don't throw exceptions to prevent email issues from breaking
      * critical business operations.
      */
-    private fun sendEmail(to: String, subject: String, htmlContent: String, plainText: String) {
+    /**
+     * Send an email with HTML and plain text content.
+     * Made public to allow facility booking notifications.
+     */
+    fun sendEmail(to: String, subject: String, htmlContent: String, plainText: String) {
         if (!emailEnabled) {
             logger.info("Email disabled - would send to $to: $subject")
             return

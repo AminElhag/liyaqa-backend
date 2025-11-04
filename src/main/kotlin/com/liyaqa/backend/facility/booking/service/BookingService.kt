@@ -29,7 +29,9 @@ class BookingService(
     private val bookingRepository: BookingRepository,
     private val courtRepository: CourtRepository,
     private val memberRepository: MemberRepository,
-    private val membershipRepository: MembershipRepository
+    private val membershipRepository: MembershipRepository,
+    private val discountService: com.liyaqa.backend.facility.membership.service.DiscountService,
+    private val emailService: BookingEmailService
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -61,9 +63,14 @@ class BookingService(
         // Calculate end time
         val endTime = request.startTime.plusMinutes(request.durationMinutes.toLong())
 
-        // Check for overlapping bookings
+        // Check for court overlapping bookings
         if (bookingRepository.hasOverlappingBooking(court.id!!, request.startTime, endTime)) {
             throw IllegalStateException("Court is already booked for the requested time")
+        }
+
+        // Check for member overlapping bookings (prevent double-booking)
+        if (bookingRepository.memberHasOverlappingBooking(request.memberId, request.startTime, endTime)) {
+            throw IllegalStateException("You already have a booking at this time")
         }
 
         // Validate membership if provided
@@ -77,14 +84,55 @@ class BookingService(
             throw IllegalArgumentException("Membership does not belong to the specified member")
         }
 
-        // Calculate price
-        val hourlyRate = court.hourlyRate
-        val hours = request.durationMinutes.toBigDecimal().divide(BigDecimal(60))
+        // Enforce membership booking limits if applicable
+        membership?.let {
+            // Check if membership allows bookings
+            if (!it.canMakeBooking()) {
+                throw IllegalStateException("Monthly booking limit reached for your membership")
+            }
+
+            // Check concurrent booking limit
+            it.plan.maxConcurrentBookings?.let { limit ->
+                val concurrentCount = bookingRepository.countConcurrentBookingsByMemberId(
+                    request.memberId,
+                    LocalDateTime.now()
+                )
+                if (concurrentCount >= limit) {
+                    throw IllegalStateException("Concurrent booking limit ($limit) reached")
+                }
+            }
+
+            // Check monthly booking limit for this specific membership
+            it.plan.maxBookingsPerMonth?.let { limit ->
+                val monthStart = LocalDate.now().withDayOfMonth(1)
+                val monthEnd = monthStart.plusMonths(1).minusDays(1)
+                val monthlyCount = bookingRepository.countBookingsByMembershipIdInMonth(
+                    it.id!!,
+                    monthStart,
+                    monthEnd
+                )
+                if (monthlyCount >= limit) {
+                    throw IllegalStateException("Monthly booking limit ($limit) reached for this membership")
+                }
+            }
+        }
+
+        // Calculate price with peak hour pricing
+        val hourlyRate = if (isPeakHour(request.startTime)) {
+            court.peakHourRate ?: court.hourlyRate
+        } else {
+            court.hourlyRate
+        }
+        val hours = request.durationMinutes.toBigDecimal().divide(BigDecimal(60), 2, java.math.RoundingMode.HALF_UP)
         val originalPrice = hourlyRate.multiply(hours)
 
         // Apply membership discount if applicable
         var discountAmount = BigDecimal.ZERO
-        // TODO: Implement membership benefit discount logic
+        if (membership != null && membership.plan.courtBookingDiscount != null) {
+            // Calculate discount based on membership plan benefit
+            val discountPercent = membership.plan.courtBookingDiscount!!
+            discountAmount = originalPrice.multiply(discountPercent).divide(BigDecimal(100), 2, java.math.RoundingMode.HALF_UP)
+        }
 
         val finalPrice = originalPrice.subtract(discountAmount)
 
@@ -123,6 +171,14 @@ class BookingService(
         val savedBooking = bookingRepository.save(booking)
 
         logger.info("Booking created: ${savedBooking.bookingNumber} for ${member.getFullName()} at ${court.name}")
+
+        // Send confirmation email asynchronously
+        try {
+            emailService.sendBookingConfirmation(savedBooking)
+        } catch (e: Exception) {
+            logger.error("Failed to send booking confirmation email", e)
+            // Don't fail the booking if email fails
+        }
 
         return BookingResponse.from(savedBooking)
     }
@@ -244,6 +300,14 @@ class BookingService(
 
         logger.info("Booking cancelled: ${savedBooking.bookingNumber} - Reason: ${request.reason}")
 
+        // Send cancellation email asynchronously
+        try {
+            emailService.sendCancellationNotification(savedBooking)
+        } catch (e: Exception) {
+            logger.error("Failed to send cancellation email", e)
+            // Don't fail the cancellation if email fails
+        }
+
         return BookingResponse.from(savedBooking)
     }
 
@@ -300,6 +364,14 @@ class BookingService(
         val savedBooking = bookingRepository.save(booking)
 
         logger.warn("Booking marked as no-show: ${savedBooking.bookingNumber}")
+
+        // Send no-show notification email asynchronously
+        try {
+            emailService.sendNoShowNotification(savedBooking)
+        } catch (e: Exception) {
+            logger.error("Failed to send no-show notification email", e)
+            // Don't fail the operation if email fails
+        }
 
         return BookingResponse.from(savedBooking)
     }
@@ -429,6 +501,23 @@ class BookingService(
     fun getTodaysBookingsByBranch(branchId: UUID): List<BookingBasicResponse> {
         return bookingRepository.findTodaysByBranchId(branchId, LocalDate.now())
             .map { BookingBasicResponse.from(it) }
+    }
+
+    /**
+     * Check if given time is during peak hours.
+     * Peak hours: Weekdays 5 PM - 10 PM, Weekends all day
+     */
+    private fun isPeakHour(time: LocalDateTime): Boolean {
+        val dayOfWeek = time.dayOfWeek
+        val hour = time.hour
+
+        // Weekends are always peak hours (Saturday & Sunday)
+        if (dayOfWeek == java.time.DayOfWeek.SATURDAY || dayOfWeek == java.time.DayOfWeek.SUNDAY) {
+            return true
+        }
+
+        // Weekday evenings (5 PM - 10 PM) are peak hours
+        return hour in 17..21
     }
 
     /**

@@ -113,6 +113,9 @@ class MembershipPlan(
     @Column(name = "discount_percentage", precision = 5, scale = 2)
     var discountPercentage: BigDecimal? = null, // For promotional pricing
 
+    @Column(name = "court_booking_discount", precision = 5, scale = 2)
+    var courtBookingDiscount: BigDecimal? = null, // Percentage discount on court bookings
+
     // === Status ===
     @Column(name = "is_active", nullable = false)
     var isActive: Boolean = true,

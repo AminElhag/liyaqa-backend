@@ -58,5 +58,32 @@ enum class Permission {
     // Audit & Compliance
     AUDIT_VIEW_LOGS,
     AUDIT_EXPORT_REPORTS,
-    AUDIT_DELETE_LOGS // Very restricted - compliance only
+    AUDIT_DELETE_LOGS, // Very restricted - compliance only
+
+    // Booking Management (Facility Operations)
+    BOOKING_VIEW,
+    BOOKING_CREATE,
+    BOOKING_UPDATE,
+    BOOKING_CANCEL,
+    BOOKING_CHECKIN,
+    BOOKING_MANAGE_ALL, // Can manage any booking
+
+    // Court Management
+    COURT_VIEW,
+    COURT_CREATE,
+    COURT_UPDATE,
+    COURT_DELETE,
+    COURT_MANAGE,
+
+    // Member Management (Facility)
+    MEMBER_VIEW,
+    MEMBER_CREATE,
+    MEMBER_UPDATE,
+    MEMBER_DELETE,
+
+    // Membership Management
+    MEMBERSHIP_VIEW,
+    MEMBERSHIP_CREATE,
+    MEMBERSHIP_CANCEL,
+    MEMBERSHIP_MANAGE
 }
