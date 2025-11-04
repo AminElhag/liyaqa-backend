@@ -61,7 +61,17 @@ The project has **two main top-level modules**:
 
 2. **`facility/`** - Tenant-facing features (for sports facility employees)
    - `employee/` - Facility employee management (different from internal employees)
-   - More features to be added (courts, bookings, schedules, etc.)
+   - `membership/` - Member management and membership plans
+   - `booking/` - Court/facility booking system
+   - `trainer/` - Personal trainer booking system (see below)
+   - More features to be added (schedules, payments, analytics, etc.)
+
+3. **`api/`** - Public API for external integrations (see Public API section below)
+   - `domain/` - API key management entities
+   - `service/` - API key generation and validation
+   - `security/` - Bearer token authentication filter
+   - `controller/` - Public API endpoints (versioned as v1)
+   - `dto/` - Public-facing request/response DTOs
 
 **Key Distinction:**
 - **Internal employees** (`internal/employee/`) = Liyaqa team members (support, sales, engineering)
@@ -107,6 +117,10 @@ All schema changes go through Liquibase:
     <addForeignKeyConstraint .../>
 </changeSet>
 ```
+
+**Recent Changesets:**
+- **032**: Public API system - `api_keys` table for external integrations
+- **033**: Personal trainer booking - 4 tables (trainers, trainer_availabilities, trainer_bookings, trainer_reviews)
 
 ### Entity Conventions
 
@@ -161,6 +175,221 @@ private fun checkPermission(employee: Employee, permission: Permission) {
 ```
 
 Always check permissions at the **service layer**, not just controllers.
+
+## Public API System
+
+The Public API (`api/` module) enables external integrations through secure API key authentication.
+
+### API Key Authentication
+
+**Key Format:**
+- Production: `lyk_live_{random}`
+- Test: `lyk_test_{random}`
+- 64 characters total, cryptographically secure
+
+**Security Model:**
+- Keys are BCrypt hashed (only shown once at creation)
+- Prefix-based lookup (`lyk_live_`, `lyk_test_`)
+- Bearer token authentication
+- Scope-based permissions (e.g., `facilities:read`, `bookings:write`)
+
+**API Key Entity:**
+```kotlin
+class ApiKey(
+    var keyPrefix: String,      // First 8 chars for lookup
+    var keyHash: String,         // BCrypt hash
+    var scopes: String,          // JSON array of permissions
+    var rateLimitPerHour: Int,
+    var environment: ApiKeyEnvironment  // LIVE or TEST
+)
+```
+
+**Standard Scopes:**
+- `facilities:read`, `facilities:write`
+- `bookings:read`, `bookings:write`, `bookings:cancel`
+- `members:read`, `members:write`
+- `trainers:read`, `trainers:book`
+- `payments:read`, `payments:process`
+
+### Authentication Flow
+
+**Endpoint Protection:**
+All `/api/v1/public/*` endpoints require:
+```
+Authorization: Bearer lyk_live_xxxxxxxxxxxxx
+```
+
+**Filter Chain:**
+1. `ApiKeyAuthenticationFilter` intercepts public API requests
+2. Extracts Bearer token from Authorization header
+3. Validates token via `ApiKeyService.validateApiKey()`
+4. Checks key is active, not expired, and within rate limits
+5. Sets Spring Security authentication with scopes as authorities
+
+**Usage Tracking:**
+- Every request increments usage counters
+- Last used timestamp updated
+- Rate limiting enforced (hourly and daily limits)
+
+### Public API Endpoints
+
+**Base Path:** `/api/v1/public`
+
+Current endpoints:
+- `GET /facilities` - List facilities
+- `GET /facilities/{id}` - Get facility details
+- `GET /facilities/{id}/branches` - List branches
+- `POST /bookings` - Create booking (stub)
+
+### API Key Management
+
+**Creation (Internal Only):**
+```kotlin
+val (apiKey, rawKey) = apiKeyService.generateApiKey(
+    tenantId = "tenant_xyz",
+    name = "Mobile App Integration",
+    scopes = listOf(ApiScopes.BOOKINGS_READ, ApiScopes.BOOKINGS_WRITE),
+    environment = ApiKeyEnvironment.LIVE
+)
+// rawKey is only available here - must be securely stored by client
+```
+
+**Validation:**
+```kotlin
+val apiKey = apiKeyService.validateApiKey(rawKey)
+if (apiKey != null && apiKey.hasScope(ApiScopes.BOOKINGS_WRITE)) {
+    // Authorized
+}
+```
+
+### Database Schema
+
+**Table:** `api_keys` (Changeset 032)
+- Comprehensive key management
+- Usage tracking fields
+- Rate limiting configuration
+- Expiration support
+- Environment isolation (live/test)
+
+**PR Reference:** #16 - Public API v1
+
+## Personal Trainer Booking System
+
+The trainer booking system (`facility/trainer/` module) enables facilities to offer professional training services.
+
+### Domain Models
+
+**Trainer (`Trainer.kt`):**
+- Personal and professional information
+- Specializations, certifications, languages
+- Flexible pricing (30/60/90 min sessions, hourly rate)
+- Performance metrics (average rating, total sessions)
+- Availability preferences (min notice hours, max advance days)
+- Employment details (hire date, type, status)
+
+**Trainer Availability (`TrainerAvailability.kt`):**
+- **Regular schedules**: Weekly recurring (e.g., Monday 9am-5pm)
+- **One-time blocks**: Special availability for specific dates
+- **Time-off periods**: Block unavailable dates
+- Conflict detection logic
+
+**Trainer Booking (`TrainerBooking.kt`):**
+- Complete booking lifecycle
+- Session types: Personal, Semi-Private, Group, Assessment, Consultation
+- Status flow: Pending → Confirmed → In Progress → Completed
+- Check-in/check-out tracking
+- Dynamic pricing based on duration
+- Trainer notes and member performance ratings
+- Cancellation with reason tracking
+
+**Trainer Review (`TrainerReview.kt`):**
+- Overall rating (1-5 stars, decimal precision)
+- Specific ratings: professionalism, knowledge, communication, motivation
+- Review moderation workflow (pending/approved/rejected/hidden)
+- Trainer response capability
+- Verified booking reviews
+- Helpful vote tracking
+
+### Key Features
+
+**Conflict Detection:**
+```kotlin
+fun countConflictingBookings(
+    trainerId: UUID,
+    startTime: LocalDateTime,
+    endTime: LocalDateTime
+): Long
+```
+Prevents double-booking by checking overlapping sessions.
+
+**Dynamic Pricing:**
+```kotlin
+fun getRateForDuration(durationMinutes: Int): BigDecimal? {
+    return when (durationMinutes) {
+        30 -> sessionRate30Min
+        60 -> sessionRate60Min
+        90 -> sessionRate90Min
+        else -> hourlyRate?.multiply(BigDecimal(durationMinutes / 60.0))
+    }
+}
+```
+
+**Availability Management:**
+- Regular weekly schedules with day-of-week and time ranges
+- One-time availability for special sessions
+- Time-off blocking for vacations/holidays
+- Conflict detection between availability slots
+
+### API Endpoints
+
+**Member-Facing** (`/api/v1/member/trainers`):
+```
+GET    /                           - List available trainers
+GET    /{trainerId}                - Get trainer details
+POST   /{trainerId}/book           - Book training session
+GET    /bookings                   - Get member's bookings
+POST   /bookings/{bookingId}/cancel - Cancel booking
+```
+
+**Future Endpoints:**
+- Admin endpoints for trainer management
+- Trainer-facing endpoints for schedule management
+- Review submission and moderation endpoints
+
+### Booking Flow
+
+1. **Browse Trainers**: Member lists available trainers with ratings
+2. **Check Availability**: View trainer's schedule and available slots
+3. **Create Booking**: Select time slot, session type, and special requests
+4. **Validation**: System checks for conflicts and calculates price
+5. **Confirmation**: Booking created with pending status
+6. **Session**: Check-in when session starts, check-out when complete
+7. **Completion**: Trainer adds notes, member can leave review
+
+### Database Schema
+
+**Tables** (Changeset 033):
+1. `trainers` - 30+ columns for complete trainer profiles
+2. `trainer_availabilities` - Schedule management
+3. `trainer_bookings` - Booking lifecycle with full audit trail
+4. `trainer_reviews` - Multi-dimensional ratings and moderation
+
+**Indexes:**
+- 15+ indexes for optimal query performance
+- Facility and branch lookups
+- Date range queries
+- Rating calculations
+- Tenant isolation
+
+### Business Value
+
+- **New Revenue Stream**: Monetize trainer services
+- **Member Experience**: Easy booking and transparent pricing
+- **Quality Control**: Review system and moderation
+- **Operational Efficiency**: Automated conflict detection
+- **Performance Tracking**: Session counts and ratings per trainer
+
+**PR Reference:** #17 - Personal Trainer Booking System
 
 ## Code Patterns & Conventions
 
@@ -266,10 +495,21 @@ The system uses `BootstrapService` for initialization:
 
 - **NEVER commit directly to `main`**
 - Always create feature branches: `feature/description`
-- Conventional commits preferred
-- **NEVER include Claude attribution in commits**
+- Conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`
+- Include Claude attribution in commits:
+  ```
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
 - All changes must compile before committing
 - Use `git mv` when moving files to preserve history
+- Create comprehensive PRs with business context and technical details
+
+### Recent Pull Requests
+
+- **PR #16**: Public API v1 - External integration platform
+- **PR #17**: Personal Trainer Booking System - New revenue stream
 
 ## Critical Development Rules
 
