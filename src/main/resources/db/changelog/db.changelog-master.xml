@@ -2266,4 +2266,444 @@
             <column name="expires_at"/>
         </createIndex>
     </changeSet>
+
+    <!-- Changeset 033: Personal Trainer Booking System -->
+    <changeSet id="033-create-trainer-booking-system" author="liyaqa">
+        <comment>
+            Create trainer booking system tables for personal training sessions.
+            Enables members to book one-on-one or group sessions with trainers.
+        </comment>
+
+        <!-- Trainers Table -->
+        <createTable tableName="trainers">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_facility" references="sport_facilities(id)"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_branch" references="facility_branches(id)"/>
+            </column>
+
+            <!-- Personal Info -->
+            <column name="first_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="last_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="phone_number" type="VARCHAR(20)"/>
+
+            <column name="date_of_birth" type="TIMESTAMP"/>
+
+            <column name="gender" type="VARCHAR(20)"/>
+
+            <!-- Profile -->
+            <column name="bio" type="TEXT"/>
+
+            <column name="profile_photo_url" type="VARCHAR(500)"/>
+
+            <column name="years_of_experience" type="INTEGER"/>
+
+            <column name="specializations" type="TEXT"/>
+
+            <column name="certifications" type="TEXT"/>
+
+            <column name="languages" type="VARCHAR(255)"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="available_for_booking" type="BOOLEAN" defaultValueBoolean="true"/>
+
+            <!-- Pricing -->
+            <column name="hourly_rate" type="DECIMAL(10,2)"/>
+
+            <column name="session_rate_30min" type="DECIMAL(10,2)"/>
+
+            <column name="session_rate_60min" type="DECIMAL(10,2)"/>
+
+            <column name="session_rate_90min" type="DECIMAL(10,2)"/>
+
+            <column name="currency" type="VARCHAR(3)" defaultValue="USD"/>
+
+            <!-- Ratings -->
+            <column name="average_rating" type="DECIMAL(3,2)" defaultValueNumeric="0"/>
+
+            <column name="total_reviews" type="INTEGER" defaultValueNumeric="0"/>
+
+            <column name="total_sessions" type="INTEGER" defaultValueNumeric="0"/>
+
+            <!-- Availability Settings -->
+            <column name="min_booking_notice_hours" type="INTEGER" defaultValueNumeric="24"/>
+
+            <column name="max_advance_booking_days" type="INTEGER" defaultValueNumeric="30"/>
+
+            <column name="session_buffer_minutes" type="INTEGER" defaultValueNumeric="15"/>
+
+            <!-- Employment -->
+            <column name="employee_number" type="VARCHAR(50)"/>
+
+            <column name="hire_date" type="TIMESTAMP"/>
+
+            <column name="employment_type" type="VARCHAR(50)"/>
+
+            <!-- Social -->
+            <column name="instagram_handle" type="VARCHAR(100)"/>
+
+            <column name="website_url" type="VARCHAR(500)"/>
+
+            <!-- Emergency Contact -->
+            <column name="emergency_contact_name" type="VARCHAR(255)"/>
+
+            <column name="emergency_contact_phone" type="VARCHAR(20)"/>
+
+            <!-- Audit -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Trainer Availabilities Table -->
+        <createTable tableName="trainer_availabilities">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="trainer_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_avail_trainer" references="trainers(id)"/>
+            </column>
+
+            <column name="availability_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Regular Schedule -->
+            <column name="day_of_week" type="VARCHAR(20)"/>
+
+            <column name="start_time" type="TIME"/>
+
+            <column name="end_time" type="TIME"/>
+
+            <!-- Specific Dates -->
+            <column name="specific_date" type="DATE"/>
+
+            <column name="specific_start_datetime" type="TIMESTAMP"/>
+
+            <column name="specific_end_datetime" type="TIMESTAMP"/>
+
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true"/>
+
+            <column name="notes" type="TEXT"/>
+
+            <!-- Audit -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Trainer Bookings Table -->
+        <createTable tableName="trainer_bookings">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="trainer_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_booking_trainer" references="trainers(id)"/>
+            </column>
+
+            <column name="member_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_booking_member" references="members(id)"/>
+            </column>
+
+            <column name="facility_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_booking_facility" references="sport_facilities(id)"/>
+            </column>
+
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_booking_branch" references="facility_branches(id)"/>
+            </column>
+
+            <!-- Booking Details -->
+            <column name="booking_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="session_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="start_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="end_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="duration_minutes" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Session Type -->
+            <column name="session_type" type="VARCHAR(50)" defaultValue="PERSONAL">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="session_focus" type="VARCHAR(255)"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status_reason" type="TEXT"/>
+
+            <column name="status_changed_at" type="TIMESTAMP"/>
+
+            <!-- Pricing -->
+            <column name="price" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="discount_amount" type="DECIMAL(10,2)" defaultValueNumeric="0"/>
+
+            <column name="final_price" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="currency" type="VARCHAR(3)" defaultValue="USD">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Payment -->
+            <column name="payment_status" type="VARCHAR(50)" defaultValue="PENDING"/>
+
+            <column name="payment_method" type="VARCHAR(50)"/>
+
+            <column name="payment_reference" type="VARCHAR(255)"/>
+
+            <column name="paid_at" type="TIMESTAMP"/>
+
+            <!-- Session Details -->
+            <column name="location" type="VARCHAR(255)"/>
+
+            <column name="special_requests" type="TEXT"/>
+
+            <column name="member_goals" type="TEXT"/>
+
+            <column name="health_notes" type="TEXT"/>
+
+            <!-- Check-in/out -->
+            <column name="checked_in_at" type="TIMESTAMP"/>
+
+            <column name="checked_out_at" type="TIMESTAMP"/>
+
+            <!-- Session Notes -->
+            <column name="trainer_notes" type="TEXT"/>
+
+            <column name="exercises_performed" type="TEXT"/>
+
+            <column name="member_performance_rating" type="INTEGER"/>
+
+            <!-- Cancellation -->
+            <column name="cancelled_at" type="TIMESTAMP"/>
+
+            <column name="cancelled_by" type="VARCHAR(255)"/>
+
+            <column name="cancellation_reason" type="TEXT"/>
+
+            <column name="refund_amount" type="DECIMAL(10,2)"/>
+
+            <!-- Rescheduling -->
+            <column name="rescheduled_from_id" type="UUID"/>
+
+            <column name="rescheduled_to_id" type="UUID"/>
+
+            <!-- Notifications -->
+            <column name="reminder_sent" type="BOOLEAN" defaultValueBoolean="false"/>
+
+            <column name="reminder_sent_at" type="TIMESTAMP"/>
+
+            <!-- Audit -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Trainer Reviews Table -->
+        <createTable tableName="trainer_reviews">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="trainer_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_review_trainer" references="trainers(id)"/>
+            </column>
+
+            <column name="member_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_trainer_review_member" references="members(id)"/>
+            </column>
+
+            <column name="booking_id" type="UUID">
+                <constraints foreignKeyName="fk_trainer_review_booking" references="trainer_bookings(id)"/>
+            </column>
+
+            <!-- Rating -->
+            <column name="rating" type="DECIMAL(3,2)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Review Content -->
+            <column name="title" type="VARCHAR(255)"/>
+
+            <column name="comment" type="TEXT"/>
+
+            <!-- Specific Ratings -->
+            <column name="professionalism_rating" type="INTEGER"/>
+
+            <column name="knowledge_rating" type="INTEGER"/>
+
+            <column name="communication_rating" type="INTEGER"/>
+
+            <column name="motivation_rating" type="INTEGER"/>
+
+            <!-- Status -->
+            <column name="status" type="VARCHAR(50)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="is_verified_booking" type="BOOLEAN" defaultValueBoolean="false"/>
+
+            <!-- Moderation -->
+            <column name="is_flagged" type="BOOLEAN" defaultValueBoolean="false"/>
+
+            <column name="flag_reason" type="TEXT"/>
+
+            <column name="moderated_at" type="TIMESTAMP"/>
+
+            <column name="moderated_by" type="UUID"/>
+
+            <!-- Trainer Response -->
+            <column name="trainer_response" type="TEXT"/>
+
+            <column name="trainer_responded_at" type="TIMESTAMP"/>
+
+            <!-- Helpful Votes -->
+            <column name="helpful_count" type="INTEGER" defaultValueNumeric="0"/>
+
+            <!-- Audit -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP"/>
+
+            <column name="version" type="BIGINT" defaultValue="0"/>
+        </createTable>
+
+        <!-- Indexes -->
+        <createIndex tableName="trainers" indexName="idx_trainer_facility">
+            <column name="facility_id"/>
+        </createIndex>
+
+        <createIndex tableName="trainers" indexName="idx_trainer_branch">
+            <column name="branch_id"/>
+        </createIndex>
+
+        <createIndex tableName="trainers" indexName="idx_trainer_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="trainers" indexName="idx_trainer_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <createIndex tableName="trainers" indexName="idx_trainer_email">
+            <column name="email"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_availabilities" indexName="idx_trainer_avail_trainer">
+            <column name="trainer_id"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_availabilities" indexName="idx_trainer_avail_day">
+            <column name="day_of_week"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_availabilities" indexName="idx_trainer_avail_type">
+            <column name="availability_type"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_bookings" indexName="idx_trainer_booking_trainer">
+            <column name="trainer_id"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_bookings" indexName="idx_trainer_booking_member">
+            <column name="member_id"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_bookings" indexName="idx_trainer_booking_status">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_bookings" indexName="idx_trainer_booking_date">
+            <column name="session_date"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_bookings" indexName="idx_trainer_booking_number">
+            <column name="booking_number"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_reviews" indexName="idx_trainer_review_trainer">
+            <column name="trainer_id"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_reviews" indexName="idx_trainer_review_member">
+            <column name="member_id"/>
+        </createIndex>
+
+        <createIndex tableName="trainer_reviews" indexName="idx_trainer_review_rating">
+            <column name="rating"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
