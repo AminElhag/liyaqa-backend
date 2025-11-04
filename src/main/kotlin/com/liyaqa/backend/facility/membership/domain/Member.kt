@@ -146,7 +146,35 @@ class Member(
 
     // === Profile Picture ===
     @Column(name = "profile_picture_url")
-    var profilePictureUrl: String? = null
+    var profilePictureUrl: String? = null,
+
+    // === Authentication ===
+    @Column(name = "password_hash", length = 255)
+    var passwordHash: String? = null,
+
+    @Column(name = "email_verified")
+    var emailVerified: Boolean = false,
+
+    @Column(name = "email_verification_token", length = 255)
+    var emailVerificationToken: String? = null,
+
+    @Column(name = "email_verification_sent_at")
+    var emailVerificationSentAt: Instant? = null,
+
+    @Column(name = "password_reset_token", length = 255)
+    var passwordResetToken: String? = null,
+
+    @Column(name = "password_reset_expires_at")
+    var passwordResetExpiresAt: Instant? = null,
+
+    @Column(name = "last_login_at")
+    var lastLoginAt: Instant? = null,
+
+    @Column(name = "failed_login_attempts")
+    var failedLoginAttempts: Int = 0,
+
+    @Column(name = "locked_until")
+    var lockedUntil: Instant? = null
 
 ) : BaseEntity() {
 
@@ -210,6 +238,92 @@ class Member(
         this.status = MemberStatus.BANNED
         this.statusReason = reason
         this.statusChangedAt = Instant.now()
+    }
+
+    // === Authentication Methods ===
+
+    /**
+     * Check if account is locked.
+     */
+    fun isLocked(): Boolean {
+        return lockedUntil != null && lockedUntil!!.isAfter(Instant.now())
+    }
+
+    /**
+     * Record failed login attempt.
+     */
+    fun recordFailedLogin() {
+        failedLoginAttempts++
+        if (failedLoginAttempts >= 5) {
+            // Lock account for 30 minutes after 5 failed attempts
+            lockedUntil = Instant.now().plusSeconds(30 * 60)
+        }
+    }
+
+    /**
+     * Record successful login.
+     */
+    fun recordSuccessfulLogin() {
+        lastLoginAt = Instant.now()
+        failedLoginAttempts = 0
+        lockedUntil = null
+    }
+
+    /**
+     * Check if email verification is required.
+     */
+    fun requiresEmailVerification(): Boolean {
+        return !emailVerified
+    }
+
+    /**
+     * Generate email verification token.
+     */
+    fun generateEmailVerificationToken(): String {
+        val token = java.util.UUID.randomUUID().toString()
+        emailVerificationToken = token
+        emailVerificationSentAt = Instant.now()
+        return token
+    }
+
+    /**
+     * Verify email with token.
+     */
+    fun verifyEmail(token: String): Boolean {
+        if (emailVerificationToken == token) {
+            emailVerified = true
+            emailVerificationToken = null
+            emailVerificationSentAt = null
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Generate password reset token.
+     */
+    fun generatePasswordResetToken(): String {
+        val token = java.util.UUID.randomUUID().toString()
+        passwordResetToken = token
+        passwordResetExpiresAt = Instant.now().plusSeconds(60 * 60) // 1 hour
+        return token
+    }
+
+    /**
+     * Check if password reset token is valid.
+     */
+    fun isPasswordResetTokenValid(token: String): Boolean {
+        return passwordResetToken == token &&
+                passwordResetExpiresAt != null &&
+                passwordResetExpiresAt!!.isAfter(Instant.now())
+    }
+
+    /**
+     * Clear password reset token.
+     */
+    fun clearPasswordResetToken() {
+        passwordResetToken = null
+        passwordResetExpiresAt = null
     }
 
     override fun toString(): String {
