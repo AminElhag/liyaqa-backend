@@ -270,4 +270,51 @@ interface BookingRepository : JpaRepository<Booking, UUID> {
         @Param("startDate") startDate: LocalDate,
         @Param("endDate") endDate: LocalDate
     ): BigDecimal
+
+    /**
+     * Check if member has overlapping booking.
+     */
+    @Query("""
+        SELECT COUNT(b) > 0 FROM Booking b
+        WHERE b.member.id = :memberId
+        AND b.status IN ('CONFIRMED', 'CHECKED_IN')
+        AND (
+            (b.startTime < :endTime AND b.endTime > :startTime)
+        )
+    """)
+    fun memberHasOverlappingBooking(
+        @Param("memberId") memberId: UUID,
+        @Param("startTime") startTime: LocalDateTime,
+        @Param("endTime") endTime: LocalDateTime
+    ): Boolean
+
+    /**
+     * Count concurrent bookings for a member.
+     */
+    @Query("""
+        SELECT COUNT(b) FROM Booking b
+        WHERE b.member.id = :memberId
+        AND b.status IN ('CONFIRMED', 'CHECKED_IN')
+        AND b.startTime >= :now
+    """)
+    fun countConcurrentBookingsByMemberId(
+        @Param("memberId") memberId: UUID,
+        @Param("now") now: LocalDateTime
+    ): Long
+
+    /**
+     * Count bookings for membership in current month.
+     */
+    @Query("""
+        SELECT COUNT(b) FROM Booking b
+        WHERE b.membership.id = :membershipId
+        AND b.bookingDate >= :monthStart
+        AND b.bookingDate <= :monthEnd
+        AND b.status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED')
+    """)
+    fun countBookingsByMembershipIdInMonth(
+        @Param("membershipId") membershipId: UUID,
+        @Param("monthStart") monthStart: LocalDate,
+        @Param("monthEnd") monthEnd: LocalDate
+    ): Long
 }
