@@ -1748,4 +1748,82 @@
                              columnNames="gateway,gateway_payment_id"
                              constraintName="uk_gateway_payment_id"/>
     </changeSet>
+
+    <!-- Changeset 029: Add Member Authentication Fields -->
+    <changeSet id="029-add-member-authentication-fields" author="liyaqa">
+        <comment>
+            Add authentication fields to members table for customer self-service authentication.
+            Includes password hash, email verification, password reset, and account security fields.
+        </comment>
+
+        <!-- Authentication Fields -->
+        <addColumn tableName="members">
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="members">
+            <column name="email_verified" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="members">
+            <column name="email_verification_token" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="members">
+            <column name="email_verification_sent_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Password Reset Fields -->
+        <addColumn tableName="members">
+            <column name="password_reset_token" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="members">
+            <column name="password_reset_expires_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Security Fields -->
+        <addColumn tableName="members">
+            <column name="last_login_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="members">
+            <column name="failed_login_attempts" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="members">
+            <column name="locked_until" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Indexes for Authentication -->
+        <createIndex tableName="members" indexName="idx_member_email_verification_token">
+            <column name="email_verification_token"/>
+        </createIndex>
+
+        <createIndex tableName="members" indexName="idx_member_password_reset_token">
+            <column name="password_reset_token"/>
+        </createIndex>
+
+        <createIndex tableName="members" indexName="idx_member_email_verified">
+            <column name="email_verified"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
