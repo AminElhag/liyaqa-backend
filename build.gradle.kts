@@ -57,6 +57,9 @@ dependencies {
     // JavaMailSender
     implementation("org.springframework.boot:spring-boot-starter-mail:4.0.0-RC1")
 
+    // Payment Gateway - Stripe
+    implementation("com.stripe:stripe-java:25.3.0")
+
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")

@@ -90,6 +90,15 @@ liyaqa:
       batch-size: ${AUDIT_BATCH_SIZE:50}
       batch-timeout-ms: ${AUDIT_BATCH_TIMEOUT_MS:1000}
 
+payment:
+  stripe:
+    api-key: ${STRIPE_API_KEY:sk_test_placeholder}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_placeholder}
+  default:
+    currency: ${PAYMENT_DEFAULT_CURRENCY:USD}
+    capture-method: ${PAYMENT_CAPTURE_METHOD:AUTOMATIC}
+
 management:
   endpoints:
     web:
