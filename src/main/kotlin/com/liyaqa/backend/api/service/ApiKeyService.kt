@@ -5,7 +5,7 @@ import com.liyaqa.backend.api.domain.ApiKey
 import com.liyaqa.backend.api.domain.ApiKeyEnvironment
 import com.liyaqa.backend.api.domain.ApiKeyStatus
 import org.slf4j.LoggerFactory
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
@@ -25,7 +25,7 @@ import java.util.*
 @Transactional
 class ApiKeyService(
     private val apiKeyRepository: ApiKeyRepository,
-    private val passwordEncoder: BCryptPasswordEncoder
+    private val passwordEncoder: PasswordEncoder
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
