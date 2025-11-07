@@ -1426,7 +1426,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="applied_by_employee_id" type="uuid">
-                <constraints nullable="true" foreignKeyName="fk_usage_employee" references="employees(id)"/>
+                <constraints nullable="true" foreignKeyName="fk_usage_employee" references="internal_employees(id)"/>
             </column>
             <column name="notes" type="text">
                 <constraints nullable="true"/>
