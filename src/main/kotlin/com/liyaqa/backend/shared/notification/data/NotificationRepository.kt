@@ -99,7 +99,7 @@ interface NotificationRepository : JpaRepository<Notification, UUID> {
         SELECT COUNT(n) FROM Notification n
         WHERE n.type = :type
         AND n.status = 'DELIVERED'
-        AND n.createdAtBetween :start AND :end
+        AND n.createdAt BETWEEN :start AND :end
     """)
     fun countDeliveredByTypeAndPeriod(
         @Param("type") type: NotificationType,
