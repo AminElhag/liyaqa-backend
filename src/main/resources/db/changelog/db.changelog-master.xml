@@ -574,6 +574,11 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
 
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
             <!-- Foreign Key to Sport Facility -->
             <column name="facility_id" type="UUID">
                 <constraints nullable="false"
@@ -654,6 +659,11 @@
             <!-- Primary Key -->
             <column name="id" type="UUID">
                 <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Multi-tenancy -->
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
             </column>
 
             <!-- Foreign Key to Sport Facility -->
