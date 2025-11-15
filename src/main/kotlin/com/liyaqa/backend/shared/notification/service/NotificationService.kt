@@ -11,9 +11,11 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import jakarta.annotation.PreDestroy
 import java.time.Instant
 import java.time.ZoneId
 import java.util.*
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Core notification orchestration service.
@@ -43,9 +45,13 @@ class NotificationService(
     private val preferenceRepository: NotificationPreferenceRepository,
     private val templateRepository: NotificationTemplateRepository,
     private val channelProviders: List<NotificationChannelProvider>
-) {
+) : CoroutineScope {
 
     private val logger = LoggerFactory.getLogger(javaClass)
+
+    private val job = SupervisorJob()
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.IO + job
 
     // === Core API ===
 
@@ -124,7 +130,7 @@ class NotificationService(
 
             // If not scheduled, send immediately
             if (scheduledAt == null || scheduledAt.isBefore(Instant.now())) {
-                GlobalScope.launch {
+                launch {
                     sendNotification(saved.id!!)
                 }
             }
@@ -194,7 +200,7 @@ class NotificationService(
 
             // If not scheduled, send immediately
             if (request.scheduledAt == null || request.scheduledAt.isBefore(Instant.now())) {
-                GlobalScope.launch {
+                launch {
                     sendNotification(saved.id!!)
                 }
             }
@@ -293,12 +299,14 @@ class NotificationService(
      * Send notification to multiple recipients (broadcast).
      */
     @Async
-    suspend fun sendBatch(requests: List<SendNotificationRequest>): List<UUID> = coroutineScope {
-        requests.map { request ->
-            async {
-                send(request)
-            }
-        }.awaitAll().filterNotNull()
+    fun sendBatch(requests: List<SendNotificationRequest>): List<UUID> {
+        return runBlocking {
+            requests.map { request ->
+                async {
+                    send(request)
+                }
+            }.awaitAll().filterNotNull()
+        }
     }
 
     // === Scheduled Processing ===
@@ -307,22 +315,24 @@ class NotificationService(
      * Process pending notifications every minute.
      */
     @Scheduled(fixedRate = 60000) // Every minute
-    suspend fun processPendingNotifications() {
-        try {
-            val pending = notificationRepository.findPendingNotifications(
-                status = NotificationStatus.PENDING,
-                now = Instant.now(),
-                pageable = org.springframework.data.domain.PageRequest.of(0, 100)
-            )
+    fun processPendingNotifications() {
+        launch {
+            try {
+                val pending = notificationRepository.findPendingNotifications(
+                    status = NotificationStatus.PENDING,
+                    now = Instant.now(),
+                    pageable = org.springframework.data.domain.PageRequest.of(0, 100)
+                )
 
-            logger.debug("Processing {} pending notifications", pending.content.size)
+                logger.debug("Processing {} pending notifications", pending.content.size)
 
-            for (notification in pending.content) {
-                sendNotification(notification.id!!)
+                for (notification in pending.content) {
+                    sendNotification(notification.id!!)
+                }
+
+            } catch (ex: Exception) {
+                logger.error("Error processing pending notifications: {}", ex.message, ex)
             }
-
-        } catch (ex: Exception) {
-            logger.error("Error processing pending notifications: {}", ex.message, ex)
         }
     }
 
@@ -330,23 +340,25 @@ class NotificationService(
      * Retry failed notifications every 5 minutes.
      */
     @Scheduled(fixedRate = 300000) // Every 5 minutes
-    suspend fun retryFailedNotifications() {
-        try {
-            val failed = notificationRepository.findRetryableNotifications(
-                now = Instant.now(),
-                pageable = org.springframework.data.domain.PageRequest.of(0, 50)
-            )
+    fun retryFailedNotifications() {
+        launch {
+            try {
+                val failed = notificationRepository.findRetryableNotifications(
+                    now = Instant.now(),
+                    pageable = org.springframework.data.domain.PageRequest.of(0, 50)
+                )
 
-            logger.debug("Retrying {} failed notifications", failed.content.size)
+                logger.debug("Retrying {} failed notifications", failed.content.size)
 
-            for (notification in failed.content) {
-                if (notification.canRetry()) {
-                    sendNotification(notification.id!!)
+                for (notification in failed.content) {
+                    if (notification.canRetry()) {
+                        sendNotification(notification.id!!)
+                    }
                 }
-            }
 
-        } catch (ex: Exception) {
-            logger.error("Error retrying failed notifications: {}", ex.message, ex)
+            } catch (ex: Exception) {
+                logger.error("Error retrying failed notifications: {}", ex.message, ex)
+            }
         }
     }
 
@@ -394,6 +406,15 @@ class NotificationService(
                 it.tenantId = tenantId
                 preferenceRepository.save(it)
             }
+    }
+
+    /**
+     * Cleanup coroutine resources on service shutdown.
+     */
+    @PreDestroy
+    fun cleanup() {
+        job.cancel()
+        logger.info("NotificationService coroutine scope cleaned up")
     }
 }
 
